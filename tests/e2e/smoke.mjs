@@ -65,6 +65,7 @@ await step('Criar rápido: Story → tema → arte → postar (3 toques)', async
   const f = path.join(OUT, 'rapido-story.png'); await dl.saveAs(f);
   const [w, h] = pngDims(fs.readFileSync(f)); if (w !== 1080 || h !== 1920) throw new Error(`${w}x${h}`);
   await closeSheets();
+  for (const c of ['amarelo', 'lilas', 'bronze']) { await page.click(`[data-col=${c}]`); await page.waitForTimeout(1300); await shot('03d-cores-' + c); }
   await go('#/rapido?f=feed'); await page.fill('#own', 'Recomeçar também é um ato de fé.'); await page.click('#go'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(1200); await shot('03c-rapido-minha-frase');
   return `Story ${w}×${h} pronto para o Instagram; Feed com frase própria: ${await page.locator('#g [data-i]').count()} opções`;
 });

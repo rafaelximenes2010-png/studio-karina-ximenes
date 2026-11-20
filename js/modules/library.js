@@ -32,14 +32,14 @@ function artsTab(pane, query) {
   pane.innerHTML = `
     <div class="search">${I.search}<input class="input" id="aq" type="search" placeholder="${t('Buscar por tema, palavra ou campanha')}"></div>
     <div class="chips" id="cats" style="margin-top:10px"><button class="chip" data-cat="todas" aria-pressed="true">${t('Todas')}</button>${CATEGORIES.map((c) => `<button class="chip" data-cat="${c.id}">${t(c.label)}</button>`).join('')}</div>
-    <div class="chips" id="pals"><button class="chip" data-pal="todas" aria-pressed="true">${t('Todas as paletas')}</button>${Object.entries(PALETTES).map(([k, p]) => `<button class="chip" data-pal="${k}"><i style="width:14px;height:14px;border-radius:50%;background:${p.bg.type === 'solid' ? p.bg.c1 : `linear-gradient(${p.bg.c1},${p.bg.c2})`};border:1px solid #0002"></i>${t(p.name)}</button>`).join('')}</div>
+    <div class="chips" id="pals"><button class="chip" data-pal="todas" aria-pressed="true">${t('Todas as paletas')}</button><button class="chip" data-pal="@alegres">☀️ ${t('Alegres')}</button>${Object.entries(PALETTES).map(([k, p]) => `<button class="chip" data-pal="${k}"><i style="width:14px;height:14px;border-radius:50%;background:${p.bg.type === 'solid' ? p.bg.c1 : `linear-gradient(${p.bg.c1},${p.bg.c2})`};border:1px solid #0002"></i>${t(p.name)}</button>`).join('')}</div>
     <div class="row between" style="margin:4px 0 12px"><span class="small muted" id="count"></span><div class="seg" id="fmts">${[['story', 'Story'], ['portrait', 'Feed'], ['square', t('Quadrado')]].map(([k, l]) => `<button data-fmt="${k}" aria-pressed="${k === fmt}">${l}</button>`).join('')}</div></div>
     <div class="grid arts" id="grid"></div>
     <div style="text-align:center;margin:18px 0"><button class="btn ghost" id="more">${t('Carregar mais')}</button></div>`;
   if (cat !== 'todas') $$('#cats .chip', pane).forEach((c) => c.setAttribute('aria-pressed', c.dataset.cat === cat));
   const norm = (x) => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const paint = () => {
-    let list = allArts().filter((a) => (cat === 'todas' || a.cat === cat) && (pal === 'todas' || a.palette === pal));
+    let list = allArts().filter((a) => (cat === 'todas' || a.cat === cat) && (pal === 'todas' || a.palette === pal || (pal === '@alegres' && PALETTES[a.palette].mood === 'alegre')));
     if (q) list = list.filter((a) => { const p = phraseById(a.phraseId); return norm(p.text + ' ' + (p.title || '') + ' ' + (p.campaign || '') + ' ' + (p.items || []).join(' ')).includes(q); });
     $('#count', pane).textContent = t('{n} artes', { n: list.length });
     $('#grid', pane).innerHTML = list.slice(0, shown).map((a) => artCard({ phraseId: a.phraseId, layout: a.layout, palette: a.palette, format: fmt }, { title: t(CATEGORIES.find((c) => c.id === a.cat)?.label), sub: ' · ' + t(LAYOUTS[a.layout] || 'Carrossel'), pill: a.layout === 'carrossel' ? t('Carrossel') : '' })).join('') || `<div class="empty">${t('Nada encontrado.')}</div>`;

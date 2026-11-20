@@ -3,7 +3,7 @@ import { t } from '../lib/i18n.js';
 import { db } from '../lib/store.js';
 import { esc, slug } from '../lib/util.js';
 import { PHRASES, CATEGORIES, captionFor, phraseById } from '../lib/content.js';
-import { PALETTES, buildPages, newProjectFromSpec } from '../lib/templates.js';
+import { PALETTES, COLOR_GROUPS, buildPages, newProjectFromSpec } from '../lib/templates.js';
 import { FORMATS } from '../lib/render.js';
 import { I, $, $$, sheet, toast, drawThumb, exportPage, ensureFonts, measureCtx, signature, downloadBlob, copyText, refresh } from '../ui.js';
 import { chooseImage } from './media.js';
@@ -24,7 +24,7 @@ const PALS = Object.keys(PALETTES);
 const N = 6;
 
 export async function render(view, { query }) {
-  const st = { format: query.get('f') === 'feed' ? 'portrait' : query.get('f') === 'story' ? 'story' : null, theme: null, text: '', photo: null, shift: 0 };
+  const st = { colors: sessionStorage.getItem('sk-colors') || 'todas', format: query.get('f') === 'feed' ? 'portrait' : query.get('f') === 'story' ? 'story' : null, theme: null, text: '', photo: null, shift: 0 };
   const box = () => view;
   const paint = () => (st.format ? (st.theme || st.text ? arts() : themes()) : formats());
 
@@ -73,7 +73,7 @@ export async function render(view, { query }) {
     }
     return phrases.map((p, i) => {
       const layout = p.items ? (i % 2 ? 'cartaolista' : 'lista') : lays[(st.shift * 3 + i) % lays.length];
-      return { phrase: p.id === 'custom' ? p : undefined, phraseId: p.id === 'custom' ? undefined : p.id, layout, palette: PALS[(st.shift * 5 + i * 3) % PALS.length], format: st.format };
+      return { phrase: p.id === 'custom' ? p : undefined, phraseId: p.id === 'custom' ? undefined : p.id, layout, palette: (() => { const ks = COLOR_GROUPS[st.colors]?.keys || PALS; return ks[(st.shift * 5 + i * 3) % ks.length]; })(), format: st.format };
     });
   }
   const pagesOf = (spec) => {
@@ -91,12 +91,16 @@ export async function render(view, { query }) {
       <h1 class="h-title" style="margin:12px 0 4px">${t('Escolha uma arte')}</h1>
       <p class="small muted" style="margin:0 0 12px">${t('Toque para ver grande e postar.')}</p>
       <div class="row" style="margin-bottom:12px"><button class="btn sm secondary" id="more">${I.refresh}${t('Outras opções')}</button><button class="btn sm ${st.photo ? 'gold' : 'secondary'}" id="photo">${I.image}${st.photo ? t('Trocar foto') : t('Usar minha foto')}</button>${st.photo ? `<button class="btn sm ghost" id="nophoto">${t('Sem foto')}</button>` : ''}</div>
+      <div class="chips" id="cols">${Object.entries(COLOR_GROUPS).filter(([k]) => k !== 'classicas').map(([k, g]) => {
+        const sw = g.keys.slice(0, 3).map((pk) => PALETTES[pk].bg).map((b) => `<i style="width:12px;height:12px;border-radius:50%;background:${b.type === 'solid' ? b.c1 : `linear-gradient(${b.c1},${b.c2})`};border:1px solid #0002;margin-right:-4px"></i>`).join('');
+        return `<button class="chip" data-col="${k}" aria-pressed="${st.colors === k}">${k === 'todas' ? '' : `<span style="display:inline-flex;margin-right:6px">${sw}</span>`}${t(g.label)}</button>`; }).join('')}</div>
       <div class="grid" style="grid-template-columns:repeat(${st.format === 'story' ? 3 : 2},minmax(0,1fr))" id="g">${list.map((_, i) => `<button class="art" data-i="${i}" aria-label="${t('Arte')} ${i + 1}"><canvas></canvas></button>`).join('')}</div>`;
     const cs = $$('#g canvas', box());
     for (let i = 0; i < list.length; i++) drawThumb(cs[i], pagesOf(list[i])[0], st.format, st.format === 'story' ? 240 : 300);
     box().onclick = async (e) => {
       if (e.target.closest('[data-back]')) { st.theme = null; st.text = ''; return paint(); }
       if (e.target.closest('#more')) { st.shift++; return paint(); }
+      const col = e.target.closest('[data-col]'); if (col) { st.colors = col.dataset.col; sessionStorage.setItem('sk-colors', st.colors); st.shift = 0; return paint(); }
       if (e.target.closest('#nophoto')) { st.photo = null; return paint(); }
       if (e.target.closest('#photo')) { const a = await chooseImage({ title: t('Sua foto') }); if (a) { st.photo = a.id; paint(); } return; }
       const b = e.target.closest('[data-i]'); if (b) post(list[+b.dataset.i]);
