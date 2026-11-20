@@ -151,14 +151,15 @@ async function arts(view, fk, th, txt, tema) {
     <div class="chips" id="cols">${Object.entries(COLOR_GROUPS).filter(([k]) => k !== 'classicas').map(([k, g]) => {
       const sw = g.keys.slice(0, 3).map((pk) => PALETTES[pk].bg).map((b) => `<i style="width:12px;height:12px;border-radius:50%;background:${b.type === 'solid' ? b.c1 : `linear-gradient(${b.c1},${b.c2})`};border:1px solid #0002;margin-right:-4px"></i>`).join('');
       return `<button class="chip" data-col="${k}" aria-pressed="${st.colors === k}">${k === 'todas' ? '' : `<span style="display:inline-flex;margin-right:6px">${sw}</span>`}${t(g.label)}</button>`; }).join('')}</div>
-    <div class="grid" style="grid-template-columns:repeat(${fmt === 'story' ? 3 : 2},minmax(0,1fr));margin-top:8px" id="g"></div>
+    <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:8px" id="g"></div>
     <button class="btn block secondary" id="more" style="margin-top:14px">${I.refresh}${t('Ver outras artes')}</button>`;
   for (const im of $$('img[data-asset]', view)) assetImage(im.dataset.asset).then((x) => { if (x) im.src = x.src; });
   // paisagens reais (renovadas todo mês)
   if (fk !== 'carousel') landscapePhotos().then((list) => {
     const m = $('#land', view); if (!m) return;
     if (!list.length) { m.innerHTML = `<span class="xs muted">${t('Sem internet: as paisagens aparecem quando voltar a conexão.')}</span>`; return; }
-    m.innerHTML = list.map((p, i) => `<button data-lp="${i}" aria-pressed="false" title="${esc(p.title)} · ${esc(p.license)}"><img loading="lazy" src="${esc(p.thumb)}" alt="${esc(p.title)}"></button>`).join('');
+    m.innerHTML = list.map((p, i) => `<button data-lp="${i}" aria-pressed="false" title="${esc(p.title)} · ${esc(p.license)}"><img loading="lazy" src="${esc(p.thumb)}" data-full="${esc(p.full)}" alt="${esc(p.title)}"></button>`).join('');
+    fixThumbs(m);
     m.onclick = async (e) => {
       const b = e.target.closest('[data-lp]'); if (!b) return; e.stopPropagation(); const p = list[+b.dataset.lp];
       toast(t('Baixando paisagem...'));
@@ -169,7 +170,8 @@ async function arts(view, fk, th, txt, tema) {
   // fotos do mês (sugestões renovadas mensalmente)
   if (fk !== 'carousel') monthPhotos().then((list) => {
     const m = $('#month', view); if (!m || !list.length) return;
-    m.innerHTML = list.slice(0, 10).map((p, i) => `<button data-mp="${i}" title="${esc(p.license)} · ${esc(p.author)}"><img loading="lazy" src="${esc(p.thumb)}" alt="${esc(p.title)}"></button>`).join('');
+    m.innerHTML = list.slice(0, 10).map((p, i) => `<button data-mp="${i}" title="${esc(p.license)} · ${esc(p.author)}"><img loading="lazy" src="${esc(p.thumb)}" data-full="${esc(p.full)}" alt="${esc(p.title)}"></button>`).join('');
+    fixThumbs(m);
     m.onclick = async (e) => {
       const b = e.target.closest('[data-mp]'); if (!b) return; e.stopPropagation(); const p = list[+b.dataset.mp];
       toast(t('Baixando imagem...'));
@@ -182,7 +184,7 @@ async function arts(view, fk, th, txt, tema) {
     const list = specs();
     grid.innerHTML = list.map((_, i) => `<button class="art" data-i="${i}" aria-label="${t('Arte')} ${i + 1}">${fk === 'carousel' ? `<span class="pill">${t('Carrossel')}</span>` : ''}<canvas></canvas></button>`).join('');
     const cs = $$('canvas', grid);
-    list.forEach((sp, i) => { const pg = pagesOf(sp, st.photo)[0]; drawThumb(cs[i], pg, sp.format, fmt === 'story' ? 240 : 300); });
+    list.forEach((sp, i) => { const pg = pagesOf(sp, st.photo)[0]; drawThumb(cs[i], pg, sp.format, 420); });
     grid.onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) postArt(list[+b.dataset.i], { photo: st.photo, wa: !!F.wa }); };
   };
   paintGrid();
@@ -202,6 +204,11 @@ async function arts(view, fk, th, txt, tema) {
     }
     if (e.target.closest('[data-add]')) { const a = await chooseImage({ title: t('Sua foto') }); if (a) { sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt, tema); } }
   };
+}
+
+// Miniatura que falhar (rede, tamanho recusado) troca pela foto grande; se falhar de novo, some
+function fixThumbs(root) {
+  for (const im of root.querySelectorAll('img[data-full]')) im.addEventListener('error', () => { if (im.dataset.full && im.src !== im.dataset.full) { im.src = im.dataset.full; im.dataset.full = ''; } else im.closest('button')?.remove(); });
 }
 
 function pagesOf(spec, photo) {
