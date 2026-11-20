@@ -31,4 +31,11 @@ save(mask, 'icon-maskable-192.png', 192)
 save(full, 'favicon-32.png', 32)
 save(full, 'favicon-48.png', 48)
 
+# Imagem de prévia para WhatsApp/redes (Open Graph 1200×630): logo original centralizada sobre o creme
+og = Image.new('RGB', (1200, 630), bg)
+lh = 560; lw = int(w * lh / h)
+og.paste(src.resize((lw, lh), Image.LANCZOS), ((1200 - lw) // 2, (630 - lh) // 2))
+og.save(os.path.join(B, 'og-image.jpg'), quality=88, optimize=True, progressive=True)
+# versão quadrada (alguns apps usam miniatura quadrada)
+save(full.convert('RGB'), 'og-square.png', 600)
 print('fundo', bg, 'ok')

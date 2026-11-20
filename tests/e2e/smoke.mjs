@@ -207,6 +207,18 @@ await step('Tutorial de primeiro acesso', async () => {
   await p3.waitForSelector('#tut h2', { timeout: 8000 }); const ti = await p3.locator('#tut h2').innerText();
   await p3.screenshot({ path: path.join(OUT, '24-tutorial.png') }); await p3.close(); return ti;
 });
+await step('Link do WhatsApp: prévia com a logomarca e instalação no iPhone', async () => {
+  const p4 = await ctx.newPage(); await p4.goto(BASE + 'instalar.html'); await p4.waitForSelector('#ios:not([hidden])');
+  const r = await p4.evaluate(async () => {
+    const og = document.querySelector('meta[property="og:image"]').content;
+    const local = new URL(og.replace(/^https:\/\/[^/]+\/studio-karina-ximenes\//, './'), location.href).href;
+    const sz = await new Promise((ok) => { const i = new Image(); i.onload = () => ok(i.naturalWidth + '×' + i.naturalHeight); i.onerror = () => ok('erro'); i.src = local; });
+    return { og: sz, title: document.querySelector('meta[property="og:title"]').content, wa: document.getElementById('share').href.startsWith('https://wa.me/'), logo: document.querySelector('.logo').naturalWidth };
+  });
+  await p4.screenshot({ path: path.join(OUT, '25-instalar-iphone.png') }); await p4.close();
+  if (r.og !== '1200×630' || !r.wa || r.logo < 180) throw new Error(JSON.stringify(r));
+  return `prévia ${r.og} "${r.title}"; passo a passo iPhone; botão WhatsApp`;
+});
 await step('Sem erros de JavaScript', async () => { if (errors.length) throw new Error(errors.slice(0, 3).join(' || ')); return '0 erros'; });
 
 await browser.close();

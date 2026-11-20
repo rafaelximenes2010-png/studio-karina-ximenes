@@ -678,4 +678,8 @@ export const DICT = {
   "preencher em Ajustes": { en: "fill in Settings", es: "completar en Ajustes" },
   "Complete nome completo, CRP e e-mail em Perfil → Ajustes para finalizar a política.": { en: "Fill in full name, CRP and e-mail in Profile → Settings to finish the policy.", es: "Completa nombre, CRP y correo en Perfil → Ajustes para finalizar la política." },
   "Política completa com seus dados profissionais. Recomendamos revisão jurídica antes de divulgação pública.": { en: "Policy complete with your professional details. We recommend a legal review before public release.", es: "Política completa con tus datos profesionales. Recomendamos revisión jurídica antes de difundirla." },
+  "Link de instalação (abre com a logomarca e o passo a passo para iPhone e Android):": { en: "Install link (opens with the logo and step-by-step for iPhone and Android):", es: "Enlace de instalación (abre con el logotipo y el paso a paso para iPhone y Android):" },
+  "Studio Karina Ximenes — instale o app no celular:": { en: "Studio Karina Ximenes — install the app on your phone:", es: "Studio Karina Ximenes — instala la app en tu celular:" },
+  "Enviar pelo WhatsApp": { en: "Send via WhatsApp", es: "Enviar por WhatsApp" },
+  "Instale o app no celular:": { en: "Install the app on your phone:", es: "Instala la app en tu celular:" },
 };

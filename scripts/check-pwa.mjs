@@ -25,6 +25,20 @@ for (const [, u] of html.matchAll(/(?:href|src)="(\.\/[^"#]+)"/g)) { const f = p
 if (/<script(?![^>]*src=)[^>]*>[^<]+<\/script>/.test(html)) fail('script inline encontrado (CSP bloqueia)'); else ok('sem scripts inline (CSP)');
 if (/href="https?:\/\//.test(html.replace(/<meta[^>]+>/g, ''))) fail('recurso externo no index.html'); else ok('sem recursos externos no shell');
 
+// Prévia de link (WhatsApp): og:image absoluta, existente, 1200×630, leve
+for (const page of ['index.html', 'instalar.html']) {
+  const h = fs.readFileSync(path.join(root, page), 'utf8');
+  const og = h.match(/property="og:image" content="([^"]+)"/);
+  if (!og) { fail(`${page}: sem og:image`); continue; }
+  if (!/^https:\/\//.test(og[1])) fail(`${page}: og:image precisa ser endereço absoluto https`);
+  const f = path.join(root, og[1].replace(/^https:\/\/[^/]+\/studio-karina-ximenes\//, '').split('?')[0]);
+  if (!fs.existsSync(f)) { fail(`${page}: og:image inexistente`); continue; }
+  const b = fs.readFileSync(f); let w = 0, hh = 0;
+  for (let i = 2; i < b.length;) { if (b[i] !== 0xff) break; const m = b[i + 1]; const len = b.readUInt16BE(i + 2); if (m >= 0xc0 && m <= 0xc2) { hh = b.readUInt16BE(i + 5); w = b.readUInt16BE(i + 7); break; } i += 2 + len; }
+  ((w === 1200 && hh === 630 && b.length < 300000) ? ok : fail)(`${page}: og:image ${w}×${hh}, ${(b.length / 1024).toFixed(0)} KB (WhatsApp)`);
+  for (const k of ['og:title', 'og:description', 'og:url']) (h.includes(`property="${k}"`) ? ok : fail)(`${page}: ${k}`);
+  for (const [, u] of h.matchAll(/(?:href|src)="(\.\/[^"#]+)"/g)) { if (u === './') continue; (fs.existsSync(path.join(root, strip(u))) ? null : fail(`${page}: referência quebrada ${u}`)); }
+}
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 const core = JSON.parse(sw.match(/const CORE = (\[[\s\S]*?\]);/)[1]);
 for (const u of core) { if (u === './') continue; (fs.existsSync(path.join(root, strip(u))) ? null : fail(`sw: arquivo inexistente no cache ${u}`)); }
