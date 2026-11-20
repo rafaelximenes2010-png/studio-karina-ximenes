@@ -18,6 +18,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Preparar ícones oficiais iOS e Android
+        run: |
+          python -m pip install --quiet cairosvg pillow
+          python - <<'PY'
+          import cairosvg
+          from PIL import Image
+          from io import BytesIO
+          for size in (180, 192, 512):
+              raw = cairosvg.svg2png(url='logo-oficial.svg', output_width=size, output_height=size)
+              Image.open(BytesIO(raw)).convert('RGB').save(f'icon-{size}.png', optimize=True)
+          PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
