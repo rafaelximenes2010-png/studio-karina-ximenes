@@ -4,7 +4,7 @@ import { prefs, db } from './lib/store.js';
 import { generateMonth, monthsAhead } from './lib/plan.js';
 import { I, $, $$, toast } from './ui.js';
 
-export const VERSION = '2.0.4';
+export const VERSION = '2.1.0';
 
 const ROUTES = {
   '': () => import('./modules/home.js'),
@@ -47,7 +47,7 @@ async function route() {
   const params = { id: rest.join('/') || null, query: new URLSearchParams(query), name: key };
   try { cleanup?.(); } catch { /* noop */ }
   cleanup = null;
-  document.body.classList.toggle('sub', !TOP_LEVEL.has(key) || params.id !== null);
+  document.body.classList.toggle('sub', key !== '');
   document.body.classList.remove('editor-mode');
   document.body.classList.toggle('on-frank', key === 'textos' || key === 'rapido');
   $$('.bottomnav a').forEach((a) => (a.dataset.nav === NAV_OF[key] ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));

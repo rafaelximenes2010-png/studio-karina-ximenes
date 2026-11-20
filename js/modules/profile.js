@@ -13,7 +13,7 @@ const INSTALL_URL = APP_URL + 'instalar.html';
 
 export async function render(view, { id }) {
   const page = id || '';
-  const pages = { '': hub, ajustes: settings, marca: brand, instalar: install, privacidade: privacy, admin, tutorial: () => { showTutorial(); hub(view); } };
+  const pages = { 'criar-tutorial': createTutorial, lembretes: reminders, '': hub, ajustes: settings, marca: brand, instalar: install, privacidade: privacy, admin, tutorial: () => { showTutorial(); hub(view); } };
   return (pages[page] || hub)(view);
 }
 
@@ -27,6 +27,8 @@ function hub(view) {
     ['instalar', I.install, t('Instalar e compartilhar'), t('iPhone, Android, Mac e Windows')],
     ['privacidade', I.shield, t('Privacidade, segurança e ética'), t('LGPD, CFP, backup e exclusão de dados')],
     ['tutorial', I.help, t('Tutorial'), t('Conheça o Studio em 1 minuto')],
+    ['criar-tutorial', I.wand, t('Como criar um post'), t('Passo a passo com setas e vídeo de exemplo')],
+    ['lembretes', I.calendar, t('Lembretes para criar'), t('Avisos na tela bloqueada do celular')],
     ['admin', I.grid, t('Administração'), t('Armazenamento, versão, diagnóstico')]].map(([k, ic, a, b]) => `<a class="list-item" href="#/perfil/${k}"><span class="thumb">${ic}</span><span class="grow"><b>${a}</b><span class="xs muted">${b}</span></span></a>`).join('')}
     </div>
     <p class="xs muted" style="text-align:center;margin-top:24px">KXS · Studio Karina Ximenes · v${VERSION}${p.pinHash ? ' · ' + t('acesso protegido por PIN') : ''}</p>`;
@@ -90,7 +92,7 @@ async function brand(view) {
     <h2 class="h-section">${t('Tipografia')}</h2>
     <div class="card"><p style="font-family:var(--serif);font-size:32px;margin:0">Cormorant Garamond</p><p class="small muted">${t('Títulos e frases — elegância editorial')}</p><p style="font-family:var(--sans);font-size:22px;margin:10px 0 0">Inter</p><p class="small muted">${t('Textos de apoio e interface — legibilidade')}</p></div>
     <h2 class="h-section">${t('Ícones do aplicativo')}</h2>
-    <div class="card row" style="justify-content:space-around">${[['icon-180.png', 'iPhone 180'], ['icon-192.png', 'Android 192'], ['icon-maskable-512.png', 'Maskable 512'], ['favicon-48.png', 'Favicon']].map(([f, l]) => `<div style="text-align:center"><img src="./assets/brand/${f}?v=2.0.4" alt="${l}" style="width:64px;height:64px;border-radius:14px;box-shadow:var(--shadow-1)"><div class="xs muted">${l}</div></div>`).join('')}</div>
+    <div class="card row" style="justify-content:space-around">${[['icon-180.png', 'iPhone 180'], ['icon-192.png', 'Android 192'], ['icon-maskable-512.png', 'Maskable 512'], ['favicon-48.png', 'Favicon']].map(([f, l]) => `<div style="text-align:center"><img src="./assets/brand/${f}?v=2.1.0" alt="${l}" style="width:64px;height:64px;border-radius:14px;box-shadow:var(--shadow-1)"><div class="xs muted">${l}</div></div>`).join('')}</div>
     <h2 class="h-section">${t('Paletas para artes')}</h2>
     <div class="chips">${Object.values(PALETTES).map((p) => `<span class="chip"><i style="width:14px;height:14px;border-radius:50%;background:${p.bg.type === 'solid' ? p.bg.c1 : `linear-gradient(${p.bg.c1},${p.bg.c2})`};border:1px solid #0002"></i>${t(p.name)}</span>`).join('')}</div>`;
   $('.palette', view).onclick = (e) => { const b = e.target.closest('[data-hex]'); if (b) copyText(b.dataset.hex); };
@@ -166,8 +168,8 @@ async function admin(view) {
   const checks = [];
   const ck = async (name, fn) => { try { const r = await fn(); checks.push([name, !!r, typeof r === 'string' ? r : '']); } catch (e) { checks.push([name, false, e.message]); } };
   await ck(t('Logomarca original carregada'), async () => { const im = await getLogo(); return im.naturalWidth >= 400 && `${im.naturalWidth}×${im.naturalHeight}`; });
-  for (const [f, sz] of [['icon-180.png', 180], ['icon-192.png', 192], ['icon-512.png', 512], ['icon-maskable-512.png', 512]]) await ck(`${t('Ícone')} ${f}`, () => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im.naturalWidth === sz && `${sz}×${sz}`); im.onerror = () => ok(false); im.src = `./assets/brand/${f}?v=2.0.4`; }));
-  await ck(t('Manifesto PWA'), async () => { const m = await (await fetch('./manifest.webmanifest?v=2.0.4')).json(); return m.icons.length >= 4 && m.name; });
+  for (const [f, sz] of [['icon-180.png', 180], ['icon-192.png', 192], ['icon-512.png', 512], ['icon-maskable-512.png', 512]]) await ck(`${t('Ícone')} ${f}`, () => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im.naturalWidth === sz && `${sz}×${sz}`); im.onerror = () => ok(false); im.src = `./assets/brand/${f}?v=2.1.0`; }));
+  await ck(t('Manifesto PWA'), async () => { const m = await (await fetch('./manifest.webmanifest?v=2.1.0')).json(); return m.icons.length >= 4 && m.name; });
   await ck(t('Fontes da marca'), async () => { await document.fonts.ready; return document.fonts.check('600 20px "Cormorant Garamond"') && document.fonts.check('400 16px Inter'); });
   await ck(t('Banco de dados local'), async () => { await db.put('texts', { id: '__diag', title: 'diag', text: '' }); await db.del('texts', '__diag'); return true; });
   await ck(t('Modo offline (service worker)'), async () => !!navigator.serviceWorker?.controller || (location.protocol === 'https:' ? '' : 'http local'));
@@ -197,4 +199,40 @@ export function showTutorial(first = false) {
     $('#skip', s.el).onclick = () => { if (i) { i--; paint(); } else s.close(); };
   };
   paint();
+}
+
+/** Tutorial de criação: vídeo de exemplo + passo a passo com setas no próprio app */
+function createTutorial(view) {
+  view.innerHTML = `<h1 class="h-title">${t('Como criar um post')}</h1>
+    <p class="muted small">${t('Veja o vídeo de exemplo ou faça o passo a passo guiado, com setas, direto no app.')}</p>
+    <div class="card" style="padding:8px;text-align:center"><video src="./assets/tutorial/kxs-tutorial.mp4?v=2.1.0" poster="./assets/tutorial/kxs-tutorial-capa.jpg?v=2.1.0" controls playsinline preload="metadata" style="width:100%;max-width:360px;border-radius:14px;background:#F3EDE2"></video></div>
+    <button class="btn block" id="guided" style="margin-top:14px;min-height:54px">${I.wand}${t('Começar o passo a passo com setas')}</button>
+    <h2 class="h-section">${t('Os 4 jeitos de criar')}</h2>
+    ${[['1', t('Em 3 passos'), t('Formato → assunto → toque na arte e poste.'), '#/rapido'],
+      ['2', t('Com sua frase'), t('No passo 2, escreva sua frase e veja várias artes prontas.'), '#/rapido?f=feed'],
+      ['3', t('Com sua foto'), t('No passo 3, toque em + para usar uma foto sua ou uma Foto do mês.'), '#/rapido?f=story&th=reflexoes'],
+      ['4', t('Criação livre'), t('Toque em Ajustar: mude texto, cores, foto e formato com o dedo.'), '#/criar']].map(([n, a, b, href]) => `<a class="list-item" href="${href}"><span class="thumb" style="font-family:var(--serif);font-size:24px;font-weight:600">${n}</span><span class="grow"><b>${a}</b><span class="xs muted" style="white-space:normal;display:block">${b}</span></span></a>`).join('')}`;
+  $('#guided', view).onclick = () => import('./tour.js').then((m) => m.startTour('criar'));
+}
+
+/** Lembretes recorrentes no calendário do celular (aparecem na tela bloqueada) */
+function reminders(view) {
+  const p = prefs.get(); let days = p.remDays || [1, 3, 5];
+  view.innerHTML = `<h1 class="h-title">${t('Lembretes para criar')}</h1>
+    <p class="muted small">${t('O KXS cria lembretes no calendário do seu celular. Eles aparecem na tela bloqueada e, com um toque, abrem o app para criar o post do dia.')}</p>
+    <div class="card stack">
+      <label class="field"><span>${t('Dias')}</span><div class="chips" id="dw">${[...Array(7)].map((_, i) => `<button class="chip" data-d="${i}" aria-pressed="${days.includes(i)}">${new Date(2024, 0, 7 + i).toLocaleDateString(locale(), { weekday: 'short' })}</button>`).join('')}</div></label>
+      <label class="field"><span>${t('Horário')}</span><input class="input" type="time" id="tm" value="${p.remTime || '09:00'}"></label>
+      <button class="btn block" id="mk" style="min-height:52px">${I.calendar}${t('Adicionar lembretes ao celular')}</button>
+      <p class="xs muted" style="margin:0">${t('iPhone: abra o arquivo e toque em "Adicionar tudo". Android: abra com o Google Agenda.')}</p>
+    </div>
+    <p class="xs muted">${t('Notificações enviadas pelo próprio app (sem calendário) precisam de um servidor de envio; quando o Frankie estiver publicado, esse recurso pode ser ativado.')}</p>`;
+  $('#dw', view).onclick = (e) => { const b = e.target.closest('[data-d]'); if (!b) return; const v = +b.dataset.d; days = days.includes(v) ? days.filter((x) => x !== v) : [...days, v]; b.setAttribute('aria-pressed', days.includes(v)); };
+  $('#mk', view).onclick = async () => {
+    if (!days.length) return toast(t('Escolha ao menos um dia.'));
+    const time = $('#tm', view).value || '09:00'; prefs.set({ remDays: days, remTime: time });
+    const { buildReminderICS } = await import('../lib/ics.js');
+    downloadBlob(new Blob([buildReminderICS({ days: days.sort(), time, url: APP_URL + '#/rapido' })], { type: 'text/calendar' }), 'lembretes-kxs.ics');
+    toast(t('Abra o arquivo para ativar os lembretes.'), 5000);
+  };
 }

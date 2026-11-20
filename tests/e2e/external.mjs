@@ -70,6 +70,13 @@ await step('Foto do banco livre numa arte e exportação sem bloqueio (CORS)', a
   });
   if (!r) throw new Error('exportação bloqueada'); return `PNG exportado (${(r / 1024).toFixed(0)} KB)`;
 });
+await step('Fotos do mês: sugestões renovadas e aplicação na arte', async () => {
+  await go('#/rapido?f=story&th=reflexoes'); await page.waitForSelector('#month [data-mp]', { timeout: 30000 }); await shot('06-fotos-do-mes');
+  const n = await page.locator('#month [data-mp]').count();
+  await page.locator('#month [data-mp]').first().click(); await page.waitForFunction(() => !!sessionStorage.getItem('sk-photo'), null, { timeout: 30000 });
+  const cached = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('sk-fotos-')));
+  return `${n} fotos sugeridas (${cached[0]}); foto aplicada nas artes`;
+});
 await step('Sem erros de JavaScript', async () => { if (errors.length) throw new Error(errors[0]); return '0 erros'; });
 await browser.close();
 fs.writeFileSync(path.join(OUT, 'relatorio-externas.json'), JSON.stringify({ base: BASE, date: new Date().toISOString(), results }, null, 2));

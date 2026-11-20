@@ -76,7 +76,8 @@ function footer(F, pal, sig, mode = 'center', onDark = null) {
     T((sig.split('|')[1] || 'Psicóloga').trim(), F.m + s + 26, y + s * 0.56, F.W - F.m * 2 - s - 26, 22, { align: 'left', font: 'sans', weight: 600, upper: true, ls: 6, color: ink }),
   ];
 }
-const labelOf = (p) => (p.campaign || CATEGORIES.find((c) => c.id === p.cat)?.label || '').toUpperCase();
+// O selo do tema aparece na arte, exceto para as frases da própria Karina (categoria interna)
+const labelOf = (p) => (p.campaign || (p.cat === 'minhas' ? '' : CATEGORIES.find((c) => c.id === p.cat)?.label) || '').toUpperCase();
 
 // -------------------- LAYOUTS --------------------
 const L = {

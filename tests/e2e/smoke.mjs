@@ -66,8 +66,20 @@ await step('Criar rápido: Story → tema → arte → postar (3 toques)', async
   const [w, h] = pngDims(fs.readFileSync(f)); if (w !== 1080 || h !== 1920) throw new Error(`${w}x${h}`);
   await closeSheets();
   for (const c of ['amarelo', 'lilas', 'bronze']) { await page.click(`[data-col=${c}]`); await page.waitForTimeout(1300); await shot('03d-cores-' + c); }
-  await go('#/rapido?f=feed'); await page.fill('#own', 'Recomeçar também é um ato de fé.'); await page.click('#go'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(1200); await shot('03c-rapido-minha-frase');
+  await go('#/rapido?f=feed'); await page.fill('#own', 'Recomeçar também é um ato de fé.'); await page.click('#gotxt'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(1200); await shot('03c-rapido-minha-frase');
   return `Story ${w}×${h} pronto para o Instagram; Feed com frase própria: ${await page.locator('#g [data-i]').count()} opções`;
+});
+await step('Tutorial com setas e vídeo; janelas com Voltar e arrastar para fechar', async () => {
+  await go('#/rapido'); await page.click('#tour'); await page.waitForSelector('.tour-tip'); await page.waitForTimeout(500); await shot('03e-tour');
+  const t1 = await page.locator('.tour-title').innerText(); await page.click('[data-next]'); await page.waitForTimeout(900);
+  const t2 = await page.locator('.tour-title').innerText(); await page.click('[data-skip]');
+  await go('#/perfil/criar-tutorial'); const ok = await page.evaluate(async () => { const v = document.querySelector('video'); return (await fetch(v.getAttribute('src'))).ok; });
+  if (!ok) throw new Error('vídeo não encontrado');
+  await go('#/biblioteca'); await page.waitForTimeout(800); await page.locator('#grid .art').first().click(); await page.waitForSelector('.sheet .sheet-back');
+  const box = await page.locator('.sheet .grabzone').boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + 10); await page.mouse.down(); await page.mouse.move(box.x + box.width / 2, box.y + 300, { steps: 8 }); await page.mouse.up(); await page.waitForTimeout(500);
+  if (await page.locator('.sheet-backdrop').count()) throw new Error('arrastar para baixo não fechou');
+  return `"${t1}" → "${t2}"; vídeo ok; janela fechou ao arrastar`;
 });
 await step('Biblioteca de artes prontas', async () => {
   await go('#/biblioteca'); await page.waitForTimeout(1500); await shot('03-biblioteca');

@@ -27,7 +27,7 @@ function measure(ctx, s, ls) {
 /** Quebra texto em linhas respeitando \n e largura máxima */
 export function wrapText(ctx, text, maxW, ls = 0) {
   const out = [];
-  for (const para of String(text ?? '').split('\n')) {
+  for (const para of String(text ?? '').normalize('NFC').split('\n')) {
     if (!para.trim()) { out.push(''); continue; }
     let line = '';
     for (const word of para.split(/\s+/)) {

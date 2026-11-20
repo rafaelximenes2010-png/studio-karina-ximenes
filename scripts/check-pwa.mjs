@@ -49,7 +49,7 @@ const appVer = fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').match(/VERS
 // todo arquivo JS/CSS/asset do app deve estar no cache offline
 for (const d of ['js', 'css', 'assets']) {
   const walk = (p) => fs.readdirSync(p, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(p, e.name)) : [path.join(p, e.name)]));
-  for (const f of walk(path.join(root, d))) { if (f.endsWith('.txt')) continue; const rel = './' + path.relative(root, f); if (!core.includes(rel)) fail(`sw: ${rel} fora do cache offline`); }
+  for (const f of walk(path.join(root, d))) { if (f.endsWith('.txt') || f.endsWith('.mp4')) continue; const rel = './' + path.relative(root, f); if (!core.includes(rel)) fail(`sw: ${rel} fora do cache offline`); }
 }
 if (errs.length) { console.error(`\n${errs.length} problema(s).`); process.exit(1); }
 console.log('\nPWA OK');

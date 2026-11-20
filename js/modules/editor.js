@@ -83,7 +83,7 @@ export async function render(view, { id }) {
   // ---------- Desenho ----------
   let scale = 1; let raf = 0;
   function fit() {
-    const r = stage.getBoundingClientRect(); const pad = 28;
+    const r = stage.getBoundingClientRect(); const pad = 10;
     const k = Math.min((r.width - pad) / F().w, (r.height - pad) / F().h);
     const dw = Math.max(120, Math.floor(F().w * k)); const dh = Math.floor(F().h * k);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -104,7 +104,7 @@ export async function render(view, { id }) {
       ctx.strokeStyle = cropMode ? BRAND.gold : '#2F80ED'; ctx.lineWidth = lw; ctx.setLineDash(cropMode ? [14, 8] : []);
       ctx.strokeRect(-b.w / 2, -b.h / 2, b.w, b.h); ctx.setLineDash([]);
       if (!l.locked && !cropMode) {
-        const hs = 11 / scale * Math.min(2, window.devicePixelRatio || 1);
+        const hs = 16 / scale * Math.min(2, window.devicePixelRatio || 1);
         const handle = (x, y, round) => { ctx.beginPath(); round ? ctx.arc(x, y, hs, 0, Math.PI * 2) : ctx.rect(x - hs, y - hs, hs * 2, hs * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke(); };
         handle(b.w / 2, b.h / 2, false);
         handle(0, -b.h / 2 - hs * 4, true);
@@ -122,7 +122,7 @@ export async function render(view, { id }) {
   const hit = (p) => { const ls = page().layers; for (let i = ls.length - 1; i >= 0; i--) { const l = ls[i]; if (l.hidden) continue; const q = local(l, p); if (Math.abs(q.x) <= q.b.w / 2 && Math.abs(q.y) <= q.b.h / 2) return l; } return null; };
   const handleAt = (l, p) => {
     if (!l || l.locked || cropMode) return null;
-    const q = local(l, p); const k = 11 / scale * Math.min(2, window.devicePixelRatio || 1); const hs = k * 2.4; const { b } = q;
+    const q = local(l, p); const k = 16 / scale * Math.min(2, window.devicePixelRatio || 1); const hs = k * 2.6; const { b } = q;
     if (Math.hypot(q.x - b.w / 2, q.y - b.h / 2) < hs) return 'resize';
     if (Math.hypot(q.x, q.y - (-b.h / 2 - k * 4)) < hs) return 'rotate';
     if (l.type === 'text' && Math.hypot(q.x - b.w / 2, q.y) < hs) return 'width';

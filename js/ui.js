@@ -58,18 +58,33 @@ export function toast(msg, ms = 2600) {
   clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), ms);
 }
 
-/** Abre uma folha (bottom sheet). Retorna {el, close} */
+/** Abre uma folha (bottom sheet) com botão Voltar e arrastar-para-baixo para fechar (como no iPhone). Retorna {el, close} */
 export function sheet(inner, { onClose, label = '' } = {}) {
   const prev = document.activeElement;
-  const bd = h(`<div class="sheet-backdrop" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="sheet"><div class="grab"></div>${inner}</div></div>`);
-  const close = () => { bd.remove(); document.removeEventListener('keydown', onKey); onClose?.(); prev?.focus?.(); };
+  const bd = h(`<div class="sheet-backdrop" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="sheet"><div class="grabzone"><button class="sheet-back" type="button" data-close>${I.back}<span>${t('Voltar')}</span></button><span class="grab" aria-hidden="true"></span><span></span></div>${inner}</div></div>`);
+  const sh = bd.querySelector('.sheet');
+  let closed = false;
+  const close = () => { if (closed) return; closed = true; bd.remove(); document.removeEventListener('keydown', onKey); onClose?.(); prev?.focus?.(); };
   const onKey = (e) => { if (e.key === 'Escape') close(); };
   bd.addEventListener('click', (e) => { if (e.target === bd) close(); });
   document.addEventListener('keydown', onKey);
   bd.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) close(); });
+  // Arrastar para baixo: pela barrinha a qualquer momento, ou pelo conteúdo quando já está no topo
+  let y0 = null; let dy = 0; let fromGrab = false;
+  const start = (y, grab) => { if (!grab && sh.scrollTop > 0) return; y0 = y; dy = 0; fromGrab = grab; bd.classList.add('dragging'); };
+  const move = (y, ev) => { if (y0 === null) return; dy = Math.max(0, y - y0); if (dy > 0 && (fromGrab || sh.scrollTop <= 0)) { sh.style.transform = `translateY(${dy}px)`; bd.style.background = `rgba(23,26,22,${Math.max(0.05, 0.45 - dy / 900)})`; if (ev.cancelable) ev.preventDefault(); } };
+  const end = () => { if (y0 === null) return; y0 = null; bd.classList.remove('dragging'); sh.classList.add('closing');
+    if (dy > 110) { sh.style.transform = 'translateY(110%)'; setTimeout(close, 200); } else { sh.style.transform = ''; bd.style.background = ''; setTimeout(() => sh.classList.remove('closing'), 230); } };
+  sh.addEventListener('touchstart', (e) => start(e.touches[0].clientY, !!e.target.closest('.grabzone')), { passive: true });
+  sh.addEventListener('touchmove', (e) => move(e.touches[0].clientY, e), { passive: false });
+  sh.addEventListener('touchend', end); sh.addEventListener('touchcancel', end);
+  const gz = sh.querySelector('.grabzone');
+  gz.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' || e.target.closest('button')) return; gz.setPointerCapture(e.pointerId); start(e.clientY, true); });
+  gz.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') move(e.clientY, e); });
+  gz.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') end(); });
   document.body.appendChild(bd);
-  setTimeout(() => (bd.querySelector('[autofocus]') || bd.querySelector('.sheet'))?.focus?.(), 50);
-  return { el: bd.querySelector('.sheet'), close };
+  setTimeout(() => (bd.querySelector('[autofocus]') || sh)?.focus?.(), 50);
+  return { el: sh, close };
 }
 
 export function confirmDialog(msg, { ok = t('Confirmar'), danger = false } = {}) {
