@@ -95,7 +95,7 @@ export async function render(view, { query }) {
   async function editPost(p0, isNew = false) {
     const p = deepClone(p0); const refs = await db.all('refs');
     const s = sheet(`<div class="row between"><h3>${isNew ? t('Nova publicação') : t('Publicação')}</h3><button class="icon-btn" data-close aria-label="${t('Fechar')}">${I.close}</button></div>
-      ${p.art ? `<div style="display:grid;grid-template-columns:110px 1fr;gap:12px;margin:10px 0">${artCard({ ...p.art }, { attrs: 'id="artbtn"' })}<div class="stack"><button class="btn sm block" id="mk">${I.wand}${p.projectId ? t('Abrir arte') : t('Criar arte')}</button><span class="xs muted">${esc(p.origin ? t('Origem') + ': ' + p.origin : '')}</span></div></div>` : `<button class="btn sm secondary" id="pickart" style="margin:10px 0">${I.grid}${t('Escolher arte')}</button>`}
+      ${p.art ? `<div style="display:grid;grid-template-columns:110px 1fr;gap:12px;margin:10px 0">${artCard({ ...p.art }, { attrs: 'id="artbtn"' })}<div class="stack">${p.projectId ? '' : `<button class="btn sm block" id="postnow">${I.share}${t('Postar agora')}</button>`}<button class="btn sm secondary block" id="mk">${I.wand}${p.projectId ? t('Abrir arte') : t('Ajustar arte')}</button><span class="xs muted">${esc(p.origin ? t('Origem') + ': ' + p.origin : '')}</span></div></div>` : `<button class="btn sm secondary" id="pickart" style="margin:10px 0">${I.grid}${t('Escolher arte')}</button>`}
       <div class="stack">
         <label class="field"><span>${t('Título')}</span><input class="input" id="ti" value="${esc(p.title)}"></label>
         <div class="grid c2"><label class="field"><span>${t('Data')}</span><input class="input" type="date" id="da" value="${p.date}"></label><label class="field"><span>${t('Horário')}</span><input class="input" type="time" id="ho" value="${p.time || '19:00'}"></label></div>
@@ -119,6 +119,7 @@ export async function render(view, { query }) {
     $('#dl', s.el)?.addEventListener('click', async () => { if (await confirmDialog(t('Excluir esta publicação?'), { ok: t('Excluir'), danger: true })) { await db.del('posts', p.id); s.close(); refresh(); } });
     $('#dp', s.el)?.addEventListener('click', async () => { const c = { ...collect(), id: uid('post'), status: 'ideia', projectId: null, auto: false, history: [{ at: Date.now(), status: 'ideia', note: 'Duplicada' }] }; await db.put('posts', c); s.close(); toast(t('Publicação duplicada')); refresh(); });
     $('#mk', s.el)?.addEventListener('click', async () => { await db.put('posts', collect()); s.close(); if (p.projectId && await db.get('projects', p.projectId)) location.hash = `#/editor/${p.projectId}`; else openSpec({ ...p.art }, { postId: p.id }); });
+    $('#postnow', s.el)?.addEventListener('click', async () => { await db.put('posts', collect()); s.close(); (await import('./quick.js')).postArt({ ...p.art }, { postId: p.id }); });
     $('#pickart', s.el)?.addEventListener('click', async () => { await db.put('posts', collect()); s.close(); location.hash = '#/biblioteca'; toast(t('Escolha uma arte e toque em "Programar".')); });
   }
 

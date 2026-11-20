@@ -4,11 +4,12 @@ import { prefs, db } from './lib/store.js';
 import { generateMonth, monthsAhead } from './lib/plan.js';
 import { I, $, $$, toast } from './ui.js';
 
-export const VERSION = '2.0.2';
+export const VERSION = '2.0.3';
 
 const ROUTES = {
   '': () => import('./modules/home.js'),
   criar: () => import('./modules/create.js'),
+  rapido: () => import('./modules/quick.js'),
   editor: () => import('./modules/editor.js'),
   biblioteca: () => import('./modules/library.js'),
   ciencia: () => import('./modules/science.js'),
@@ -18,8 +19,8 @@ const ROUTES = {
   agenda: () => import('./modules/agenda.js'),
   perfil: () => import('./modules/profile.js'),
 };
-const NAV_OF = { '': 'inicio', criar: 'criar', editor: 'criar', textos: 'criar', documentos: 'criar', documento: 'criar', biblioteca: 'biblioteca', ciencia: 'biblioteca', agenda: 'agenda', perfil: 'perfil' };
-const TOP_LEVEL = new Set(['', 'criar', 'biblioteca', 'agenda', 'perfil']);
+const NAV_OF = { '': 'inicio', rapido: 'criar', criar: 'criar', editor: 'criar', textos: 'criar', documentos: 'criar', documento: 'criar', biblioteca: 'biblioteca', ciencia: 'biblioteca', agenda: 'agenda', perfil: 'perfil' };
+const TOP_LEVEL = new Set(['', 'rapido', 'criar', 'biblioteca', 'agenda', 'perfil']);
 
 export function applyTheme(theme = prefs.get().theme) {
   const dark = theme === 'dark' || (theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
@@ -48,7 +49,7 @@ async function route() {
   cleanup = null;
   document.body.classList.toggle('sub', !TOP_LEVEL.has(key) || params.id !== null);
   document.body.classList.remove('editor-mode');
-  document.body.classList.toggle('on-frank', key === 'textos');
+  document.body.classList.toggle('on-frank', key === 'textos' || key === 'rapido');
   $$('.bottomnav a').forEach((a) => (a.dataset.nav === NAV_OF[key] ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
   try {
     const mod = await ROUTES[key]();

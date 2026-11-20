@@ -29,7 +29,7 @@ function hub(view) {
     ['tutorial', I.help, t('Tutorial'), t('Conheça o Studio em 1 minuto')],
     ['admin', I.grid, t('Administração'), t('Armazenamento, versão, diagnóstico')]].map(([k, ic, a, b]) => `<a class="list-item" href="#/perfil/${k}"><span class="thumb">${ic}</span><span class="grow"><b>${a}</b><span class="xs muted">${b}</span></span></a>`).join('')}
     </div>
-    <p class="xs muted" style="text-align:center;margin-top:24px">Studio Karina Ximenes · v${VERSION}${p.pinHash ? ' · ' + t('acesso protegido por PIN') : ''}</p>`;
+    <p class="xs muted" style="text-align:center;margin-top:24px">KXS · Studio Karina Ximenes · v${VERSION}${p.pinHash ? ' · ' + t('acesso protegido por PIN') : ''}</p>`;
 }
 
 function settings(view) {
@@ -90,7 +90,7 @@ async function brand(view) {
     <h2 class="h-section">${t('Tipografia')}</h2>
     <div class="card"><p style="font-family:var(--serif);font-size:32px;margin:0">Cormorant Garamond</p><p class="small muted">${t('Títulos e frases — elegância editorial')}</p><p style="font-family:var(--sans);font-size:22px;margin:10px 0 0">Inter</p><p class="small muted">${t('Textos de apoio e interface — legibilidade')}</p></div>
     <h2 class="h-section">${t('Ícones do aplicativo')}</h2>
-    <div class="card row" style="justify-content:space-around">${[['icon-180.png', 'iPhone 180'], ['icon-192.png', 'Android 192'], ['icon-maskable-512.png', 'Maskable 512'], ['favicon-48.png', 'Favicon']].map(([f, l]) => `<div style="text-align:center"><img src="./assets/brand/${f}?v=2.0.2" alt="${l}" style="width:64px;height:64px;border-radius:14px;box-shadow:var(--shadow-1)"><div class="xs muted">${l}</div></div>`).join('')}</div>
+    <div class="card row" style="justify-content:space-around">${[['icon-180.png', 'iPhone 180'], ['icon-192.png', 'Android 192'], ['icon-maskable-512.png', 'Maskable 512'], ['favicon-48.png', 'Favicon']].map(([f, l]) => `<div style="text-align:center"><img src="./assets/brand/${f}?v=2.0.3" alt="${l}" style="width:64px;height:64px;border-radius:14px;box-shadow:var(--shadow-1)"><div class="xs muted">${l}</div></div>`).join('')}</div>
     <h2 class="h-section">${t('Paletas para artes')}</h2>
     <div class="chips">${Object.values(PALETTES).map((p) => `<span class="chip"><i style="width:14px;height:14px;border-radius:50%;background:${p.bg.type === 'solid' ? p.bg.c1 : `linear-gradient(${p.bg.c1},${p.bg.c2})`};border:1px solid #0002"></i>${t(p.name)}</span>`).join('')}</div>`;
   $('.palette', view).onclick = (e) => { const b = e.target.closest('[data-hex]'); if (b) copyText(b.dataset.hex); };
@@ -109,7 +109,7 @@ function install(view) {
     <details class="fold"><summary>Mac / Windows</summary><div><p class="small">${t('No Chrome ou Edge, clique no ícone de instalação na barra de endereço. No Safari (macOS), use Arquivo → Adicionar ao Dock.')}</p></div></details>
     <h2 class="h-section">${t('Compartilhar o link')}</h2>
     <div class="card"><p class="small muted" style="margin-top:0">${t('Link de instalação (abre com a logomarca e o passo a passo para iPhone e Android):')}</p><p class="small" style="word-break:break-all"><b>${INSTALL_URL}</b></p>
-      <a class="btn block" href="https://wa.me/?text=${encodeURIComponent(t('Studio Karina Ximenes — instale o app no celular:') + ' ' + INSTALL_URL)}" target="_blank" rel="noopener">${I.share}${t('Enviar pelo WhatsApp')}</a>
+      <a class="btn block" href="https://wa.me/?text=${encodeURIComponent('KXS · ' + t('Studio Karina Ximenes — instale o app no celular:').replace(/^KXS · /, '') + ' ' + INSTALL_URL)}" target="_blank" rel="noopener">${I.share}${t('Enviar pelo WhatsApp')}</a>
       <div class="row" style="margin-top:8px"><button class="btn sm secondary" id="cp">${I.copy}${t('Copiar link')}</button><button class="btn sm secondary" id="sh">${I.share}${t('Compartilhar')}</button></div>
     <p class="xs muted">${t('Os dados ficam em cada aparelho. Quem abrir o link terá um Studio vazio, sem acesso aos seus projetos.')}</p></div>`;
   $('#cp', view).onclick = () => copyText(INSTALL_URL);
@@ -166,8 +166,8 @@ async function admin(view) {
   const checks = [];
   const ck = async (name, fn) => { try { const r = await fn(); checks.push([name, !!r, typeof r === 'string' ? r : '']); } catch (e) { checks.push([name, false, e.message]); } };
   await ck(t('Logomarca original carregada'), async () => { const im = await getLogo(); return im.naturalWidth >= 400 && `${im.naturalWidth}×${im.naturalHeight}`; });
-  for (const [f, sz] of [['icon-180.png', 180], ['icon-192.png', 192], ['icon-512.png', 512], ['icon-maskable-512.png', 512]]) await ck(`${t('Ícone')} ${f}`, () => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im.naturalWidth === sz && `${sz}×${sz}`); im.onerror = () => ok(false); im.src = `./assets/brand/${f}?v=2.0.2`; }));
-  await ck(t('Manifesto PWA'), async () => { const m = await (await fetch('./manifest.webmanifest?v=2.0.2')).json(); return m.icons.length >= 4 && m.name; });
+  for (const [f, sz] of [['icon-180.png', 180], ['icon-192.png', 192], ['icon-512.png', 512], ['icon-maskable-512.png', 512]]) await ck(`${t('Ícone')} ${f}`, () => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im.naturalWidth === sz && `${sz}×${sz}`); im.onerror = () => ok(false); im.src = `./assets/brand/${f}?v=2.0.3`; }));
+  await ck(t('Manifesto PWA'), async () => { const m = await (await fetch('./manifest.webmanifest?v=2.0.3')).json(); return m.icons.length >= 4 && m.name; });
   await ck(t('Fontes da marca'), async () => { await document.fonts.ready; return document.fonts.check('600 20px "Cormorant Garamond"') && document.fonts.check('400 16px Inter'); });
   await ck(t('Banco de dados local'), async () => { await db.put('texts', { id: '__diag', title: 'diag', text: '' }); await db.del('texts', '__diag'); return true; });
   await ck(t('Modo offline (service worker)'), async () => !!navigator.serviceWorker?.controller || (location.protocol === 'https:' ? '' : 'http local'));

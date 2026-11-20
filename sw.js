@@ -1,5 +1,5 @@
 // Service worker — offline e cache versionado. Atualize VERSION a cada publicação.
-const VERSION = '2.0.2';
+const VERSION = '2.0.3';
 const CACHE = 'studio-karina-' + VERSION;
 const CORE = [
  "./",
@@ -48,6 +48,7 @@ const CORE = [
  "./js/modules/lock.js",
  "./js/modules/media.js",
  "./js/modules/profile.js",
+ "./js/modules/quick.js",
  "./js/modules/science.js",
  "./js/modules/shared.js",
  "./js/modules/themeweek.js",
