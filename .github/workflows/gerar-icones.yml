@@ -4,7 +4,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/gerar-icones.yml'
-      - 'app-icon.svg'
+      - 'logo-oficial.svg'
   workflow_dispatch:
 permissions:
   contents: write
@@ -21,7 +21,7 @@ jobs:
           from PIL import Image
           from io import BytesIO
           for size in (180,192,512):
-              png=cairosvg.svg2png(url='app-icon.svg',output_width=size,output_height=size)
+              png=cairosvg.svg2png(url='logo-oficial.svg',output_width=size,output_height=size)
               im=Image.open(BytesIO(png)).convert('RGB')
               im.save(f'icon-{size}.png',optimize=True)
           PY
