@@ -12,7 +12,7 @@ const results = []; let failed = 0;
 const step = async (name, fn) => {
   const t0 = Date.now();
   try { const info = await fn(); results.push({ name, ok: true, ms: Date.now() - t0, info: info || '' }); console.log(`✔ ${name}${info ? ' — ' + info : ''}`); }
-  catch (e) { failed++; results.push({ name, ok: false, ms: Date.now() - t0, info: e.message.split('\n')[0] }); console.log(`✘ ${name} — ${e.message.split('\n')[0]}`); }
+  catch (e) { failed++; results.push({ name, ok: false, ms: Date.now() - t0, info: e.message.split('\n')[0] }); console.log(`✘ ${name} — ${e.message.split('\n').slice(0, process.env.DEBUG ? 15 : 1).join('\n')}`); }
 };
 const pngDims = (buf) => [buf.readUInt32BE(16), buf.readUInt32BE(20)];
 
@@ -61,6 +61,7 @@ await step('Criar rápido: Story → tema → arte → postar (3 toques)', async
   await go('#/rapido'); await page.click('[data-fmt=story]'); await page.click('[data-th=logoterapia]');
   await page.waitForSelector('#g canvas'); await page.waitForTimeout(1500); await shot('03a-rapido-artes');
   await page.locator('#g [data-i]').first().click(); await page.waitForSelector('#ig:not([disabled])', { timeout: 20000 }); await shot('03b-rapido-postar');
+  await page.click('#big'); await page.waitForSelector('.zoom.in canvas'); await page.waitForTimeout(700); await shot('03b2-zoom-tela-cheia'); await page.click('[data-zx]'); await page.waitForTimeout(400);
   const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#ig')]);
   const f = path.join(OUT, 'rapido-story.png'); await dl.saveAs(f);
   const [w, h] = pngDims(fs.readFileSync(f)); if (w !== 1080 || h !== 1920) throw new Error(`${w}x${h}`);
@@ -68,6 +69,18 @@ await step('Criar rápido: Story → tema → arte → postar (3 toques)', async
   for (const c of ['amarelo', 'lilas', 'bronze']) { await page.click(`[data-col=${c}]`); await page.waitForTimeout(1300); await shot('03d-cores-' + c); }
   await go('#/rapido?f=feed'); await page.fill('#own', 'Recomeçar também é um ato de fé.'); await page.click('#gotxt'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(1200); await shot('03c-rapido-minha-frase');
   return `Story ${w}×${h} pronto para o Instagram; Feed com frase própria: ${await page.locator('#g [data-i]').count()} opções`;
+});
+await step('Tema livre gera frases e texto; tipos de carrossel', async () => {
+  await go('#/rapido?f=story'); await page.fill('#tema', 'luto'); await page.click('#gotema');
+  await page.waitForSelector('#g canvas'); await page.waitForTimeout(1500); await shot('03f-tema-luto');
+  const n = await page.locator('#g [data-i]').count(); const txt = await page.locator('details.fold .result').first().textContent();
+  if (!/luto/i.test(txt)) throw new Error('texto sem o tema');
+  await go('#/rapido?f=carousel&tema=ansiedade'); await page.waitForSelector('#g canvas');
+  const kinds = [];
+  for (const k of ['frases', 'dicas', 'perguntas']) { await page.click(`[data-ctype=${k}]`); await page.waitForTimeout(1300); await shot('03g-carrossel-' + k); kinds.push(k + ':' + await page.locator('#g [data-i]').count()); }
+  await page.locator('#g [data-i]').first().click(); await page.waitForSelector('#ig:not([disabled])', { timeout: 20000 });
+  const pages = await page.locator('.sheet').innerText(); await shot('03h-carrossel-postar'); await closeSheets();
+  return `${n} artes sobre "luto" com texto pronto; carrossel ${kinds.join(', ')}; ${(pages.match(/(\d+) páginas/) || [])[1] || '?'} páginas`;
 });
 await step('Tutorial com setas e vídeo; janelas com Voltar e arrastar para fechar', async () => {
   await go('#/rapido'); await page.click('#tour'); await page.waitForSelector('.tour-tip'); await page.waitForTimeout(500); await shot('03e-tour');
@@ -173,6 +186,24 @@ await step('Agenda: mês, lista e semana temática', async () => {
   const n = await page.evaluate(() => new Promise((ok) => { const r = indexedDB.open('studio-karina'); r.onsuccess = () => { const q = r.result.transaction('posts').objectStore('posts').getAll(); q.onsuccess = () => ok(q.result.filter((p) => p.theme).length); }; }));
   if (n < 5) throw new Error('semana não programada: ' + n);
   return label;
+});
+await step('Semana a partir da escrita livre; backup; Perfil organizado', async () => {
+  await go('#/agenda'); await page.waitForTimeout(800); await page.click('#week'); await page.waitForSelector('#free');
+  const { setInputFiles } = page; await page.click('#ph'); await page.waitForSelector('[data-t=studio]'); await page.click('[data-t=studio]'); await page.click('[data-studio=mar]'); await page.waitForTimeout(800);
+  await page.fill('#free', 'Recomeço\nRecomeçar não é esquecer, é aprender a carregar a saudade com mais leveza.\n\nDeus não desperdiça nenhuma dor. Às vezes o recomeço começa com um passo pequeno: levantar, tomar um café, pedir ajuda.');
+  await page.click('#mk'); await page.waitForFunction(() => document.querySelector('#freeinfo')?.textContent.length > 5, null, { timeout: 15000 });
+  await page.waitForTimeout(1200); await shot('14b-semana-escrita-livre');
+  const info = await page.locator('#freeinfo').innerText(); const label = await page.locator('#go').innerText();
+  await page.click('#go'); await page.waitForTimeout(600); if (await page.locator('[data-yes]').count()) { await page.click('[data-yes]'); await page.waitForTimeout(600); }
+  const n = await page.evaluate(() => new Promise((ok) => { const r = indexedDB.open('studio-karina'); r.onsuccess = () => { const q = r.result.transaction('posts').objectStore('posts').getAll(); q.onsuccess = () => ok(q.result.filter((p) => String(p.theme).startsWith('livre-')).length); }; }));
+  if (n < 4) throw new Error('semana livre não programada: ' + n);
+  await go('#/perfil'); await page.waitForSelector('.hub-group'); await shot('20a-perfil-organizado');
+  await go('#/perfil/backup'); await page.waitForSelector('#bk-now'); await shot('20b-backup');
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('#bk-now')]);
+  const f = path.join(OUT, 'backup.json'); await dl.saveAs(f); const j = JSON.parse(fs.readFileSync(f, 'utf8'));
+  if (j.app !== 'studio-karina-ximenes') throw new Error('backup inválido');
+  await page.waitForTimeout(500); const st = await page.locator('.backup-status b').innerText();
+  return `${info} · ${label}; backup ${Math.round(fs.statSync(f).size / 1024)} KB (${j.posts.length} publicações) · "${st}"`;
 });
 await step('Frankie: modo assistido e minhas reflexões', async () => {
   await page.click('#frank-fab'); await page.waitForSelector('.frank-head'); await shot('15-frankie');

@@ -4,6 +4,8 @@
 // KV opcional para limite de uso: binding RATE (namespace KV).
 
 const TASKS = {
+  livre: 'Atenda ao pedido da autora com liberdade criativa, como um assistente completo: proponha ideias, escreva, reescreva, sugira séries e formatos, e faça perguntas só se algo essencial faltar. Ofereça alternativas quando fizer sentido.',
+  semana: 'A partir da escrita livre abaixo, crie o conteúdo de UMA SEMANA para Instagram, fiel ao que a autora escreveu (use as palavras dela sempre que possível). Responda SOMENTE com JSON válido, sem comentários, no formato: {"tema":"tema curto","titulo":"título do carrossel de abertura","frases":["5 frases curtas (até 160 caracteres) para o carrossel"],"posts":[{"frase":"frase da arte, até 180 caracteres","legenda":"legenda com gancho, desenvolvimento e convite, sem hashtags"}],"lista":{"titulo":"título de dicas","itens":["4 ou 5 itens curtos"]},"hashtags":"5 a 8 hashtags"}. Crie 6 posts.',
   reflexao: 'Escreva uma reflexão ORIGINAL curta (até 90 palavras) para post sobre o tema informado.',
   revisao: 'Revise o texto: corrija gramática, clareza e fluidez, preservando a voz da autora. Devolva apenas o texto revisado e, ao final, uma lista curta do que foi alterado.',
   resumo: 'Resuma o texto em até 5 frases, sem acrescentar informações que não estejam no original.',
@@ -66,12 +68,14 @@ export default {
     let body; try { body = await req.json(); } catch { return json({ error: 'JSON inválido' }, 400, h); }
     const task = TASKS[body.task]; if (!task) return json({ error: 'Tarefa desconhecida' }, 400, h);
     const text = String(body.text || '').slice(0, 8000); if (!text.trim()) return json({ error: 'Texto vazio' }, 400, h);
+    // Foto opcional (JPEG/PNG em data URL, até ~1,5 MB) para o Frankie sugerir posts a partir dela
+    const img = typeof body.image === 'string' && body.image.length < 2e6 ? body.image.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/) : null;
     const prompt = `${task}\nTom: ${TONES[body.tone] || TONES.acolhedor}.\nRede/canal: ${String(body.network || 'Instagram').slice(0, 30)}.\nPúblico: ${String(body.audience || 'geral').slice(0, 120)}.${body.task === 'traducao' ? `\nIdioma de destino: ${({ en: 'inglês', es: 'espanhol', pt: 'português' })[body.lang] || 'inglês'}.` : ''}\n\nConteúdo/tema:\n"""\n${text}\n"""`;
 
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: env.MODEL || 'claude-sonnet-5-5', max_tokens: 1400, system: SYSTEM, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model: env.MODEL || 'claude-sonnet-5-5', max_tokens: ['semana', 'livre'].includes(body.task) ? 3000 : 1400, system: SYSTEM, messages: [{ role: 'user', content: img ? [{ type: 'image', source: { type: 'base64', media_type: img[1], data: img[2] } }, { type: 'text', text: prompt + '\n\nUse também a foto enviada como inspiração (descreva-a só no que for útil; não identifique pessoas).' }] : prompt }] }),
     });
     if (!r.ok) return json({ error: `Falha no provedor de IA (${r.status})` }, 502, h);
     const data = await r.json();

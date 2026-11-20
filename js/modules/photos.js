@@ -36,3 +36,26 @@ export async function monthPhotos() {
   }
   return uniq.slice(0, 24);
 }
+
+// Paisagens reais de lugares lindos (Wikimedia Commons, licença livre), renovadas todo mês
+const PLACES = [
+  'Lençóis Maranhenses', 'Fernando de Noronha', 'Chapada Diamantina', 'Serra da Mantiqueira', 'Jericoacoara', 'Bonito Mato Grosso do Sul river',
+  'Dolomites landscape', 'Swiss Alps lake', 'Patagonia mountains', 'Norway fjord', 'Iguazu Falls', 'Santorini', 'Tuscany hills', 'Lake Bled',
+  'Banff lake', 'Scottish Highlands', 'Cappadocia balloons', 'Sahara dunes', 'Maldives beach', 'Plitvice lakes', 'Halong Bay', 'Mount Fuji',
+];
+export async function landscapePhotos() {
+  const d = new Date(); const k = `sk-paisagens-${d.getFullYear()}-${d.getMonth() + 1}`;
+  try { const c = JSON.parse(localStorage.getItem(k) || 'null'); if (c?.length) return c; } catch { /* sem cache */ }
+  const start = (d.getMonth() * 5) % PLACES.length;
+  const picks = Array.from({ length: 6 }, (_, i) => PLACES[(start + i) % PLACES.length]);
+  const res = await Promise.allSettled(picks.map((q) => searchCommons(q, 6)));
+  const list = res.flatMap((r) => (r.status === 'fulfilled' ? r.value.slice(0, 3) : []))
+    .filter((p) => p.license && !/non-?free|fair use/i.test(p.license) && (!p.w || !p.h || p.w >= p.h * 0.9))
+    .map((p) => ({ ...p, full: p.thumb, thumb: p.thumb.replace(/\/\d+px-/, '/300px-') }));
+  const seen = new Set(); const uniq = list.filter((p) => !seen.has(p.title) && seen.add(p.title)).slice(0, 16);
+  if (uniq.length) {
+    for (const old of Object.keys(localStorage)) if (old.startsWith('sk-paisagens-') && old !== k) localStorage.removeItem(old);
+    try { localStorage.setItem(k, JSON.stringify(uniq)); } catch { /* cheio */ }
+  }
+  return uniq;
+}

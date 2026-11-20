@@ -77,6 +77,14 @@ await step('Fotos do mês: sugestões renovadas e aplicação na arte', async ()
   const cached = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('sk-fotos-')));
   return `${n} fotos sugeridas (${cached[0]}); foto aplicada nas artes`;
 });
+await step('Paisagens reais: posts modernos com foto de lugares lindos', async () => {
+  await page.evaluate(() => sessionStorage.clear());
+  await go('#/rapido?f=story&th=espiritualidade'); await page.waitForSelector('#land [data-lp]', { timeout: 40000 });
+  const n = await page.locator('#land [data-lp]').count();
+  await page.locator('#land [data-lp]').first().click(); await page.waitForFunction(() => !!sessionStorage.getItem('sk-paisagem'), null, { timeout: 40000 });
+  await page.waitForSelector('#g canvas'); await page.waitForTimeout(3000); await shot('07-paisagens-modernas');
+  return `${n} paisagens sugeridas; arte moderna com paisagem aplicada`;
+});
 await step('Sem erros de JavaScript', async () => { if (errors.length) throw new Error(errors[0]); return '0 erros'; });
 await browser.close();
 fs.writeFileSync(path.join(OUT, 'relatorio-externas.json'), JSON.stringify({ base: BASE, date: new Date().toISOString(), results }, null, 2));

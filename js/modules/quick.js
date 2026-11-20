@@ -5,9 +5,10 @@ import { db } from '../lib/store.js';
 import { esc, slug } from '../lib/util.js';
 import { PHRASES, captionFor, phraseById } from '../lib/content.js';
 import { PALETTES, COLOR_GROUPS, buildPages, newProjectFromSpec } from '../lib/templates.js';
-import { I, $, $$, sheet, toast, drawThumb, exportPage, ensureFonts, measureCtx, signature, downloadBlob, copyText, assetImage } from '../ui.js';
+import { I, $, $$, sheet, toast, zoomPages, drawThumb, exportPage, ensureFonts, measureCtx, signature, downloadBlob, copyText, assetImage } from '../ui.js';
 import { chooseImage, saveImageBlob } from './media.js';
-import { monthPhotos } from './photos.js';
+import { monthPhotos, landscapePhotos } from './photos.js';
+import { composeFromTheme } from '../lib/compose.js';
 
 // Formatos (Status do WhatsApp usa a mesma medida do Story)
 export const QFORMATS = {
@@ -30,6 +31,7 @@ const LAY = {
   square: ['minimal', 'aspas', 'cartao', 'circulo', 'moldura', 'editorial', 'folhas'],
 };
 const PHOTO_LAY = ['foto', 'fotoarco', 'fotofaixa', 'fotocirculo'];
+const MODERN_LAY = ['paisagem', 'paisagemcentro', 'paisagem', 'foto', 'paisagemcentro', 'fotofaixa'];
 const STUDIO = ['eucalipto', 'mar', 'caderno', 'trilha', 'cha', 'montanhas'];
 const PALS = Object.keys(PALETTES);
 
@@ -37,10 +39,10 @@ const go = (q) => { location.hash = '#/rapido' + (q ? '?' + new URLSearchParams(
 
 export async function render(view, { query }) {
   const fk = QFORMATS[query.get('f')] ? query.get('f') : (query.get('f') === 'portrait' ? 'feed' : null);
-  const th = query.get('th'); const txt = query.get('txt');
+  const th = query.get('th'); const txt = query.get('txt'); const tema = query.get('tema');
   if (!fk) return formats(view);
-  if (!th && !txt) return themes(view, fk);
-  return arts(view, fk, th, txt);
+  if (!th && !txt && !tema) return themes(view, fk);
+  return arts(view, fk, th, txt, tema);
 }
 
 function formats(view) {
@@ -62,46 +64,81 @@ function themes(view, fk) {
   view.innerHTML = `
     <div class="eyebrow">${t(QFORMATS[fk].label)} · ${t('passo')} 2 ${t('de')} 3</div>
     <h1 class="h-title" style="margin:4px 0 6px">${t('Sobre o que é?')}</h1>
-    <div class="card" style="margin:12px 0 4px">
+    <div class="card" style="margin:12px 0 10px">
+      <label class="field"><span>💡 ${t('Digite um tema e eu crio frases e textos')}</span><input class="input" id="tema" maxlength="60" placeholder="${t('Ex.: ansiedade, luto, Natal, maternidade')}" enterkeyhint="go"></label>
+      <div class="chips" id="temasug" style="margin-top:8px">${['ansiedade', 'luto', 'recomeço', 'gratidão', 'maternidade', 'autoestima', 'perdão', 'Natal'].map((x) => `<button class="chip" data-tema="${x}">${x}</button>`).join('')}</div>
+      <button class="btn block" id="gotema" style="margin-top:8px">${I.sparkle}${t('Criar frases sobre este tema')}</button>
+    </div>
+    <div class="card" style="margin:0 0 4px">
       <label class="field"><span>✍️ ${t('Escreva sua frase')}</span><textarea class="input" id="own" rows="2" placeholder="${t('Ex.: Recomeçar também é um ato de fé.')}"></textarea></label>
       <button class="btn block" id="gotxt" style="margin-top:8px">${I.wand}${t('Criar com minha frase')}</button>
     </div>
     ${GROUPS.map(([g, items]) => `<div class="qgroup">${t(g)}</div>${items.filter(([id]) => id !== 'minhas' || hasMine).map(([id, l, d, ic, bg]) => `
       <button class="qtheme" data-th="${id}"><span class="ic" style="background:${bg}">${ic}</span><span><b>${t(l)}</b><small>${t(d)}</small></span><span class="go">›</span></button>`).join('')}`).join('')}`;
-  view.onclick = (e) => { const b = e.target.closest('[data-th]'); if (b) go({ f: fk, th: b.dataset.th }); };
+  view.onclick = (e) => {
+    const sg = e.target.closest('[data-tema]'); if (sg) return go({ f: fk, tema: sg.dataset.tema });
+    const b = e.target.closest('[data-th]'); if (b) go({ f: fk, th: b.dataset.th });
+  };
+  const goTema = () => { const v = $('#tema', view).value.trim(); if (!v) return toast(t('Digite um tema.')); go({ f: fk, tema: v.slice(0, 60) }); };
+  $('#gotema', view).onclick = goTema;
+  $('#tema', view).onkeydown = (e) => { if (e.key === 'Enter') goTema(); };
   $('#gotxt', view).onclick = () => { const v = $('#own', view).value.trim(); if (!v) return toast(t('Escreva sua frase.')); go({ f: fk, txt: v.slice(0, 280) }); };
 }
 
-async function arts(view, fk, th, txt) {
+async function arts(view, fk, th, txt, tema) {
   await ensureFonts();
   const F = QFORMATS[fk]; const fmt = F.render;
-  const st = { colors: sessionStorage.getItem('sk-colors') || 'todas', photo: sessionStorage.getItem('sk-photo') || null, shift: +(sessionStorage.getItem('sk-shift-' + (th || 'txt')) || 0) };
+  const st = { colors: sessionStorage.getItem('sk-colors') || 'todas', photo: sessionStorage.getItem('sk-photo') || null, shift: +(sessionStorage.getItem('sk-shift-' + (th || tema || 'txt')) || 0) };
   const N = fk === 'carousel' ? 4 : fmt === 'portrait' ? 6 : 9;
   const palsOf = () => COLOR_GROUPS[st.colors]?.keys || PALS;
+  const themeLabel = th ? GROUPS.flatMap(([, it]) => it).find(([id]) => id === th)?.[1] : null;
+  const comp = tema ? composeFromTheme(tema) : th && th !== 'minhas' && themeLabel ? composeFromTheme(themeLabel, { cat: th }) : null;
+  st.ctype = sessionStorage.getItem('sk-ctype') || 'frases';
   const specs = () => {
     const ks = palsOf();
+    const pal = (i, k = 5) => ks[(st.shift * k + i * 3) % ks.length];
     if (fk === 'carousel') {
-      const pool = PHRASES.filter((p) => (th ? p.cat === th : true) && !p.items);
+      const cap = comp && tema ? comp.caption : undefined;
+      if (st.ctype === 'dicas' || st.ctype === 'perguntas') {
+        const lists = st.ctype === 'perguntas' ? [comp?.questions || composeFromTheme(txt || 'a vida').questions]
+          : [...PHRASES.filter((p) => p.items && (th ? p.cat === th : tema ? false : true)), comp?.list || composeFromTheme(txt || 'o dia a dia').list];
+        return Array.from({ length: N }, (_, i) => {
+          const p = lists[(st.shift + i) % lists.length];
+          return { layout: 'carrossel', ...(p.generated ? { phrase: p } : { phraseId: p.id }), palette: pal(i, 3), format: 'portrait', caption: cap };
+        });
+      }
+      const inner = ['minimal', 'aspas', 'cartao', 'moldura'];
+      const pool = comp?.phrases?.length ? comp.phrases : PHRASES.filter((p) => (th ? p.cat === th || (th === 'minhas' && p.custom) : true) && !p.items);
       return Array.from({ length: N }, (_, i) => {
-        const ids = Array.from({ length: 5 }, (_, j) => pool[(st.shift * 5 + i * 2 + j) % Math.max(1, pool.length)]?.id).filter(Boolean);
-        return { layout: 'carrossel-tema', cat: th || 'reflexoes', phraseIds: [...new Set(ids)], palette: ks[(st.shift * 3 + i * 2) % ks.length], format: 'portrait', title: txt || undefined };
+        const ps = Array.from({ length: 5 }, (_, j) => pool[(st.shift * 5 + i * 2 + j) % Math.max(1, pool.length)]).filter(Boolean);
+        const uniq = ps.filter((p, k) => ps.findIndex((x) => x.id === p.id) === k);
+        return { layout: 'carrossel-tema', cat: comp?.cat || th || 'reflexoes', ...(comp ? { phrases: uniq } : { phraseIds: uniq.map((p) => p.id) }), inner: inner[(st.shift + i) % inner.length],
+          palette: pal(i, 3), format: 'portrait', title: txt || (tema ? comp.theme : undefined), caption: cap };
       });
     }
-    const lays = st.photo ? PHOTO_LAY : LAY[fmt];
-    const list = txt ? Array.from({ length: N }, () => ({ id: 'custom', cat: 'minhas', text: txt }))
-      : (() => { const all = PHRASES.filter((p) => p.cat === th && (fmt !== 'story' || !p.items)); return Array.from({ length: N }, (_, i) => all[(st.shift * N + i) % all.length]); })();
+    const modern = st.photo && st.photo === sessionStorage.getItem('sk-paisagem');
+    const lays = modern ? MODERN_LAY : st.photo ? PHOTO_LAY : LAY[fmt];
+    let list;
+    if (txt) list = Array.from({ length: N }, () => ({ id: 'custom', cat: 'minhas', text: txt }));
+    else if (tema) list = Array.from({ length: N }, (_, i) => comp.phrases[(st.shift * N + i) % comp.phrases.length]);
+    else { const all = PHRASES.filter((p) => (th === 'minhas' ? p.custom : p.cat === th) && (fmt !== 'story' || !p.items)); list = Array.from({ length: N }, (_, i) => all[(st.shift * N + i) % all.length]); }
     return list.filter(Boolean).map((p, i) => ({
-      phrase: p.id === 'custom' ? p : undefined, phraseId: p.id === 'custom' ? undefined : p.id,
+      ...(p.id === 'custom' || p.generated ? { phrase: p } : { phraseId: p.id }),
       layout: p.items && st.photo ? 'fotolista' : p.items ? (i % 2 ? 'cartaolista' : 'lista') : lays[(st.shift * 3 + i) % lays.length],
-      palette: ks[(st.shift * 5 + i * 3) % ks.length], format: fmt,
+      palette: pal(i), format: fmt, caption: tema ? comp.caption : undefined,
     }));
   };
   const mine = (await db.all('assets')).slice(0, 12);
-  const label = txt ? t('Sua frase') : t(GROUPS.flatMap(([, it]) => it).find(([id]) => id === th)?.[1] || '');
+  const label = txt ? t('Sua frase') : tema ? comp.theme : t(themeLabel || '');
   view.innerHTML = `
     <div class="eyebrow">${t(F.label)} · ${esc(label)} · ${t('passo')} 3 ${t('de')} 3</div>
     <h1 class="h-title" style="margin:4px 0 2px">${t('Escolha uma arte')}</h1>
     <p class="small muted" style="margin:0 0 10px">${t('Toque na arte para ver grande e postar.')}</p>
+    ${fk === 'carousel' ? `<div class="qgroup" style="margin-top:6px">🗂️ ${t('Tipo de carrossel')}</div>
+    <div class="chips" id="ctype">${[['frases', '💬 ' + t('Frases do tema')], ['dicas', '📝 ' + t('Dicas passo a passo')], ['perguntas', '❓ ' + t('Perguntas para refletir')]].map(([k, l]) => `<button class="chip" data-ctype="${k}" aria-pressed="${st.ctype === k}">${l}</button>`).join('')}</div>` : ''}
+    ${tema ? `<details class="fold" style="margin:8px 0"><summary>✨ ${t('Texto pronto sobre')} ${esc(comp.theme)}</summary><div><div class="result small">${esc(comp.caption)}</div><button class="btn sm ghost" id="copytema" style="margin-top:8px">${I.copy}${t('Copiar texto')}</button></div></details>` : ''}
+    ${fk === 'carousel' ? '' : `<div class="qgroup" style="margin-top:6px">🏞️ ${t('Paisagens reais · posts modernos')}</div>
+    <div class="qphotos" id="land"><span class="xs muted" style="align-self:center">${t('Carregando paisagens...')}</span></div>`}
     ${fk === 'carousel' ? '' : `<div class="qgroup" style="margin-top:6px">📷 ${t('Foto (opcional)')}</div>
     <div class="qphotos" id="ph">
       <button data-ph="" aria-pressed="${!st.photo}">${t('Sem foto')}</button>
@@ -117,6 +154,18 @@ async function arts(view, fk, th, txt) {
     <div class="grid" style="grid-template-columns:repeat(${fmt === 'story' ? 3 : 2},minmax(0,1fr));margin-top:8px" id="g"></div>
     <button class="btn block secondary" id="more" style="margin-top:14px">${I.refresh}${t('Ver outras artes')}</button>`;
   for (const im of $$('img[data-asset]', view)) assetImage(im.dataset.asset).then((x) => { if (x) im.src = x.src; });
+  // paisagens reais (renovadas todo mês)
+  if (fk !== 'carousel') landscapePhotos().then((list) => {
+    const m = $('#land', view); if (!m) return;
+    if (!list.length) { m.innerHTML = `<span class="xs muted">${t('Sem internet: as paisagens aparecem quando voltar a conexão.')}</span>`; return; }
+    m.innerHTML = list.map((p, i) => `<button data-lp="${i}" aria-pressed="false" title="${esc(p.title)} · ${esc(p.license)}"><img loading="lazy" src="${esc(p.thumb)}" alt="${esc(p.title)}"></button>`).join('');
+    m.onclick = async (e) => {
+      const b = e.target.closest('[data-lp]'); if (!b) return; e.stopPropagation(); const p = list[+b.dataset.lp];
+      toast(t('Baixando paisagem...'));
+      try { const a = await saveImageBlob(await (await fetch(p.full)).blob(), { name: p.title, source: 'wikimedia', license: p.license, author: p.author, url: p.page }); sessionStorage.setItem('sk-photo', a.id); sessionStorage.setItem('sk-paisagem', a.id); toast(t('Paisagem aplicada · {l}', { l: p.license || 'licença livre' })); arts(view, fk, th, txt, tema); }
+      catch { toast(t('Não foi possível baixar esta imagem.')); }
+    };
+  }).catch(() => {});
   // fotos do mês (sugestões renovadas mensalmente)
   if (fk !== 'carousel') monthPhotos().then((list) => {
     const m = $('#month', view); if (!m || !list.length) return;
@@ -124,7 +173,7 @@ async function arts(view, fk, th, txt) {
     m.onclick = async (e) => {
       const b = e.target.closest('[data-mp]'); if (!b) return; e.stopPropagation(); const p = list[+b.dataset.mp];
       toast(t('Baixando imagem...'));
-      try { const a = await saveImageBlob(await (await fetch(p.full)).blob(), { name: p.title, source: 'wikimedia', license: p.license, author: p.author, url: p.page }); sessionStorage.setItem('sk-photo', a.id); toast(t('Foto do mês aplicada · {l}', { l: p.license || 'licença livre' })); arts(view, fk, th, txt); }
+      try { const a = await saveImageBlob(await (await fetch(p.full)).blob(), { name: p.title, source: 'wikimedia', license: p.license, author: p.author, url: p.page }); sessionStorage.setItem('sk-photo', a.id); toast(t('Foto do mês aplicada · {l}', { l: p.license || 'licença livre' })); arts(view, fk, th, txt, tema); }
       catch { toast(t('Não foi possível baixar esta imagem.')); }
     };
   }).catch(() => {});
@@ -138,7 +187,9 @@ async function arts(view, fk, th, txt) {
   };
   paintGrid();
   view.onclick = async (e) => {
-    if (e.target.closest('#more')) { st.shift++; sessionStorage.setItem('sk-shift-' + (th || 'txt'), st.shift); paintGrid(); window.scrollTo({ top: grid.offsetTop - 80, behavior: 'smooth' }); return; }
+    if (e.target.closest('#copytema')) { copyText(comp.caption); return toast(t('Texto copiado.')); }
+    const ct = e.target.closest('[data-ctype]'); if (ct) { st.ctype = ct.dataset.ctype; sessionStorage.setItem('sk-ctype', st.ctype); $$('#ctype .chip', view).forEach((x) => x.setAttribute('aria-pressed', x === ct)); return paintGrid(); }
+    if (e.target.closest('#more')) { st.shift++; sessionStorage.setItem('sk-shift-' + (th || tema || 'txt'), st.shift); paintGrid(); window.scrollTo({ top: grid.offsetTop - 80, behavior: 'smooth' }); return; }
     const col = e.target.closest('[data-col]'); if (col) { st.colors = col.dataset.col; sessionStorage.setItem('sk-colors', st.colors); $$('#cols .chip', view).forEach((x) => x.setAttribute('aria-pressed', x === col)); return paintGrid(); }
     const ph = e.target.closest('[data-ph]'); if (ph) { st.photo = ph.dataset.ph || null; st.photo ? sessionStorage.setItem('sk-photo', st.photo) : sessionStorage.removeItem('sk-photo'); $$('#ph button', view).forEach((x) => x.setAttribute('aria-pressed', x === ph)); return paintGrid(); }
     const sp = e.target.closest('[data-sp]');
@@ -146,10 +197,10 @@ async function arts(view, fk, th, txt) {
       const id = 'studio-photo-' + sp.dataset.sp;
       try {
         if (!(await db.get('assets', id))) await saveImageBlob(await (await fetch('./assets/photos/' + sp.dataset.sp + '.jpg')).blob(), { id, name: sp.dataset.sp, source: 'studio' });
-        sessionStorage.setItem('sk-photo', id); return arts(view, fk, th, txt);
+        sessionStorage.setItem('sk-photo', id); return arts(view, fk, th, txt, tema);
       } catch { return toast(t('Não foi possível baixar esta imagem.')); }
     }
-    if (e.target.closest('[data-add]')) { const a = await chooseImage({ title: t('Sua foto') }); if (a) { sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt); } }
+    if (e.target.closest('[data-add]')) { const a = await chooseImage({ title: t('Sua foto') }); if (a) { sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt, tema); } }
   };
 }
 
@@ -164,16 +215,18 @@ export async function postArt(spec, { photo = null, postId = null, wa = false } 
   await ensureFonts();
   const pages = pagesOf(spec, photo);
   const ph = spec.phrase || phraseById(spec.phraseId) || { text: spec.title || 'Studio Karina', cat: spec.cat || 'reflexoes' };
-  const caption = spec.layout === 'carrossel-tema' ? (spec.phraseIds || []).map((id, i) => `${i + 1}. ${phraseById(id)?.text || ''}`).join('\n') + `\n\n${signature()}` : captionFor(ph, { signature: signature() });
+  const caption = spec.caption ? `${spec.caption}\n\n${signature()}`
+    : spec.layout === 'carrossel-tema' ? (spec.phrases || (spec.phraseIds || []).map(phraseById)).map((p, i) => `${i + 1}. ${p?.text || ''}`).join('\n') + `\n\n${signature()}` : captionFor(ph, { signature: signature() });
   const cap = wa ? caption.replace(/\n\n#[\s\S]*$/, '') : caption;
   const where = wa ? t('Postar no Status do WhatsApp') : t('Postar no Instagram');
-  const s = sheet(`<div style="display:grid;place-items:center"><canvas id="big" style="max-height:50vh;width:auto;border-radius:12px;box-shadow:0 10px 30px #0003"></canvas></div>
+  const s = sheet(`<div style="display:grid;place-items:center"><canvas id="big" class="tap-zoom" style="max-height:58vh;width:auto;border-radius:12px;box-shadow:0 10px 30px #0003"></canvas><span class="xs muted" style="margin-top:6px">🔍 ${t('Toque na arte para ver em tela cheia')}</span></div>
     ${pages.length > 1 ? `<p class="xs muted" style="text-align:center;margin:6px 0 0">${pages.length} ${t('páginas no carrossel')}</p>` : ''}
     <button class="btn block" id="ig" style="margin-top:14px;min-height:56px;font-size:17px" disabled><span class="spinner" style="width:18px;height:18px;border-width:2px"></span>${t('Preparando...')}</button>
     <p class="xs muted" style="text-align:center;margin:6px 0 10px">${wa ? t('No WhatsApp, escolha "Meu status".') : t('A legenda é copiada: no Instagram, é só colar.')}</p>
     <div class="grid c2"><button class="btn secondary" id="dl">${I.download}${t('Baixar')}</button><button class="btn secondary" id="edit">${I.wand}${t('Ajustar')}</button></div>
     <details class="fold" style="margin-top:12px"><summary>${t('Ver legenda')}</summary><div><div class="result small">${esc(cap)}</div><button class="btn sm ghost" id="cap" style="margin-top:8px">${I.copy}${t('Copiar legenda')}</button></div></details>`, { label: t('Postar') });
   await drawThumb($('#big', s.el), pages[0], spec.format, 720);
+  $('#big', s.el).onclick = () => zoomPages(pages, spec.format);
   const files = [];
   for (let i = 0; i < pages.length; i++) files.push(new File([await exportPage(pages[i], spec.format)], `${slug(ph.title || ph.text).slice(0, 40)}${pages.length > 1 ? '-' + (i + 1) : ''}.png`, { type: 'image/png' }));
   const ig = $('#ig', s.el); ig.disabled = false; ig.innerHTML = `${I.share}${where}`;

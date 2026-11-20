@@ -13,24 +13,58 @@ const INSTALL_URL = APP_URL + 'instalar.html';
 
 export async function render(view, { id }) {
   const page = id || '';
-  const pages = { 'criar-tutorial': createTutorial, lembretes: reminders, '': hub, ajustes: settings, marca: brand, instalar: install, privacidade: privacy, admin, tutorial: () => { showTutorial(); hub(view); } };
+  const pages = { backup, 'criar-tutorial': createTutorial, lembretes: reminders, '': hub, ajustes: settings, marca: brand, instalar: install, privacidade: privacy, admin, tutorial: () => { showTutorial(); hub(view); } };
   return (pages[page] || hub)(view);
+}
+
+const HUB = [
+  ['Criar melhor', [['criar-tutorial', 'wand', 'Como criar um post', 'Passo a passo com setas e vídeo'], ['lembretes', 'calendar', 'Lembretes para criar', 'Avisos na tela bloqueada'], ['tutorial', 'help', 'Tutorial', 'Conheça o Studio em 1 minuto']]],
+  ['Seus dados', [['backup', 'download', 'Backup', 'Salvar e restaurar tudo'], ['privacidade', 'shield', 'Privacidade e ética', 'LGPD, CFP e exclusão de dados']]],
+  ['Aplicativo', [['ajustes', 'settings', 'Ajustes', 'Idioma, tema, assinatura, Frankie e PIN'], ['marca', 'palette', 'Identidade visual', 'Logomarca, paleta e fontes'], ['instalar', 'install', 'Instalar e compartilhar', 'iPhone, Android e computador'], ['admin', 'grid', 'Administração', 'Armazenamento, versão, diagnóstico']]],
+];
+const daysSince = (ts) => (ts ? Math.floor((Date.now() - ts) / 864e5) : null);
+function backupBanner(p) {
+  const d = daysSince(p.lastBackup);
+  if (p.backupReminder === false || (d !== null && d < 30)) return '';
+  return `<a class="card backup-status late" href="#/perfil/backup" style="margin-top:12px;text-decoration:none;color:inherit"><span class="dot"></span><span class="grow"><b>${d === null ? t('Faça seu primeiro backup') : t('Backup atrasado')}</b><span class="xs muted" style="display:block">${t('Guarde suas artes e textos no iCloud, Drive ou WhatsApp.')}</span></span>›</a>`;
+}
+
+async function backup(view) {
+  const p = prefs.get(); const d = daysSince(p.lastBackup);
+  const counts = await Promise.all(['projects', 'posts', 'phrases', 'assets', 'docs'].map(async (k) => (STORES.includes(k) ? (await db.all(k)).length : 0)));
+  view.innerHTML = `<h1 class="h-title" style="margin-bottom:6px">${t('Backup')}</h1>
+    <p class="small muted" style="margin:0 0 12px">${t('Tudo fica guardado neste aparelho. O backup cria uma cópia em um arquivo que você pode guardar no iCloud, Google Drive, e-mail ou WhatsApp.')}</p>
+    <div class="card backup-status ${d === null || d >= 30 ? 'late' : ''}"><span class="dot"></span><span class="grow"><b>${d === null ? t('Nenhum backup feito ainda') : d === 0 ? t('Último backup: hoje') : t('Último backup: há {n} dias', { n: d })}</b>
+      <span class="xs muted" style="display:block">${counts[0]} ${t('projetos')} · ${counts[1]} ${t('publicações')} · ${counts[2]} ${t('reflexões')} · ${counts[3]} ${t('fotos')}</span></span></div>
+    <button class="btn block" id="bk-now" style="margin-top:14px;min-height:56px">${I.share}${t('Fazer backup agora')}</button>
+    <p class="xs muted" style="text-align:center;margin:6px 0 14px">${t('No iPhone, escolha "Salvar em Arquivos" e depois iCloud Drive.')}</p>
+    <label class="btn block secondary" style="min-height:52px">${I.up}${t('Restaurar de um backup')}<input type="file" accept="application/json,.json" id="bk-imp" hidden></label>
+    <p class="xs muted" style="margin-top:8px">${t('Restaurar junta o backup com o que já está no aparelho; nada é apagado.')}</p>
+    <h2 class="h-section">${t('Lembrete')}</h2>
+    <div class="card"><label class="row between" style="gap:12px"><span><b>${t('Avisar todo mês')}</b><span class="xs muted" style="display:block">${t('Um aviso aparece no Perfil quando passar de 30 dias.')}</span></span><input type="checkbox" id="bk-rem" ${p.backupReminder === false ? '' : 'checked'} style="width:26px;height:26px"></label></div>`;
+  $('#bk-now', view).onclick = async () => {
+    const data = await exportAll();
+    const name = `backup-kxs-${new Date().toISOString().slice(0, 10)}.json`;
+    const file = new File([JSON.stringify(data)], name, { type: 'application/json' });
+    const mark = () => { prefs.set({ lastBackup: Date.now() }); backup(view); };
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'Backup KXS' }); toast(t('Backup salvo')); mark(); } catch (e) { if (e.name !== 'AbortError') { downloadBlob(file, name); mark(); } }
+    } else { downloadBlob(file, name); toast(t('Backup exportado')); mark(); }
+  };
+  $('#bk-imp', view).onchange = async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    try { const data = JSON.parse(await f.text()); if (!(await confirmDialog(t('Restaurar o backup de {d}?', { d: (data.exportedAt || '').slice(0, 10) || '—' }), { ok: t('Restaurar') }))) return; await importAll(data); toast(t('Backup importado')); setTimeout(() => location.reload(), 700); }
+    catch (err) { toast(err.message || t('Arquivo de backup inválido')); }
+  };
+  $('#bk-rem', view).onchange = (e) => prefs.set({ backupReminder: e.target.checked });
 }
 
 function hub(view) {
   const p = prefs.get();
   view.innerHTML = `
     <div class="card" style="display:flex;gap:14px;align-items:center"><img src="${logoSrc}" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px var(--gold)"><div><h1 class="h-title" style="font-size:26px">Karina Ximenes</h1><div class="eyebrow">${t('Psicóloga')}</div><p class="xs muted" style="margin:4px 0 0">Pessoas • Histórias • Recomeços</p></div></div>
-    <div style="margin-top:14px">
-      ${[['ajustes', I.settings, t('Ajustes'), t('Idioma, tema, assinatura, Frankie (IA) e PIN de acesso')],
-    ['marca', I.palette, t('Identidade visual'), t('Logomarca oficial, paleta, fontes e ícones')],
-    ['instalar', I.install, t('Instalar e compartilhar'), t('iPhone, Android, Mac e Windows')],
-    ['privacidade', I.shield, t('Privacidade, segurança e ética'), t('LGPD, CFP, backup e exclusão de dados')],
-    ['tutorial', I.help, t('Tutorial'), t('Conheça o Studio em 1 minuto')],
-    ['criar-tutorial', I.wand, t('Como criar um post'), t('Passo a passo com setas e vídeo de exemplo')],
-    ['lembretes', I.calendar, t('Lembretes para criar'), t('Avisos na tela bloqueada do celular')],
-    ['admin', I.grid, t('Administração'), t('Armazenamento, versão, diagnóstico')]].map(([k, ic, a, b]) => `<a class="list-item" href="#/perfil/${k}"><span class="thumb">${ic}</span><span class="grow"><b>${a}</b><span class="xs muted">${b}</span></span></a>`).join('')}
-    </div>
+    ${backupBanner(p)}
+    <div class="hub">${HUB.map(([g, items]) => `<div class="hub-group">${t(g)}</div>${items.map(([k, ic, a, b]) => `<a class="list-item" href="#/perfil/${k}"><span class="thumb">${I[ic]}</span><span class="grow"><b>${t(a)}</b><span class="xs muted">${t(b)}</span></span></a>`).join('')}`).join('')}</div>
     <p class="xs muted" style="text-align:center;margin-top:24px">KXS · Studio Karina Ximenes · v${VERSION}${p.pinHash ? ' · ' + t('acesso protegido por PIN') : ''}</p>`;
 }
 

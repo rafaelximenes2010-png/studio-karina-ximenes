@@ -3,6 +3,7 @@ import { t, locale } from '../lib/i18n.js';
 import { db, prefs } from '../lib/store.js';
 import { esc, uid, fmtDate } from '../lib/util.js';
 import { CATEGORIES } from '../lib/content.js';
+import { composeFromTheme } from '../lib/compose.js';
 import { I, $, $$, sheet, toast, copyText, confirmDialog, refresh, signature } from '../ui.js';
 import { openSpec } from './shared.js';
 import { loadCustomPhrases } from '../app.js';
@@ -25,6 +26,7 @@ async function scheduleReflection(rec) {
 }
 
 export const TASKS = {
+  livre: { label: 'Pedido livre (converse com o Frankie)', hint: 'Peça o que quiser: ideias, textos, séries de posts, revisão…' },
   reflexao: { label: 'Reflexão original', hint: 'Tema ou ideia central' },
   revisao: { label: 'Revisar texto', hint: 'Cole o texto para revisão' },
   resumo: { label: 'Resumir', hint: 'Cole o texto a resumir' },
@@ -56,16 +58,62 @@ export async function callAI(payload) {
 }
 
 // Modo assistido (sem IA): estruturas e fórmulas determinísticas, claramente sinalizadas
-function assisted({ task, text, tone, network }) {
-  const base = text.trim() || t('seu tema');
-  const tags = CATEGORIES.find((c) => base.toLowerCase().includes(c.label.toLowerCase().split(' ')[0]))?.tags || '#psicologia #saúdemental #autocuidado';
+function assisted({ task, text, tone, network, audience, lang }) {
+  const raw = text.trim();
+  const base = raw || t('seu tema');
+  const isLong = raw.length > 80 || /[.!?]\s/.test(raw);
+  const c = composeFromTheme(isLong ? (raw.split(/[.!?\n]/)[0].slice(0, 40) || 'reflexão') : base);
+  const tags = c.caption.split('\n\n').pop();
   const len = { Instagram: 2200, LinkedIn: 3000, Facebook: 5000, TikTok: 2200, WhatsApp: 1000 }[network] || 2200;
+  const pick = (arr, n, off = 0) => Array.from({ length: Math.min(n, arr.length) }, (_, i) => arr[(i + off) % arr.length]);
+  const ph = c.phrases.map((p) => p.text);
+  const sentences = raw.split(/(?<=[.!?…])\s+|\n+/).map((x) => x.trim()).filter(Boolean);
+  const fixText = (s0) => {
+    const changes = [];
+    let s0b = s0.replace(/\bvc\b/gi, 'você').replace(/\bvcs\b/gi, 'vocês').replace(/\btb\b/gi, 'também').replace(/\btbm\b/gi, 'também').replace(/\bpq\b/gi, 'porque').replace(/\bq\b/gi, 'que').replace(/\bmto\b/gi, 'muito').replace(/\bhj\b/gi, 'hoje').replace(/\bn\b/gi, 'não'); if (s0b !== s0) changes.push('abreviações escritas por extenso');
+    let s1 = s0b.replace(/[ \t]{2,}/g, ' '); if (s1 !== s0b) changes.push('espaços duplos removidos');
+    let s2 = s1.replace(/\s+([,.;:!?])/g, '$1'); if (s2 !== s1) changes.push('espaço antes de pontuação corrigido');
+    let s3 = s2.replace(/([,;:])(?=[^\s\d])/g, '$1 ').replace(/([.!?])(?=[A-Za-zÀ-ú])/g, '$1 '); if (s3 !== s2) changes.push('espaço após pontuação');
+    let s4 = s3.trim().replace(/(^|[.!?]\s+|\n)([a-zà-ú])/g, (m, p1, l) => p1 + l.toUpperCase()); if (s4 !== s3) changes.push('maiúscula no início das frases');
+    const s5 = s4;
+    let s6 = /[.!?…]$/.test(s5.trim()) ? s5.trim() : s5.trim() + '.'; if (s6 !== s5.trim()) changes.push('ponto final');
+    return { out: s6, changes };
+  };
+  const toneLine = { acolhedor: c.bright ? 'Que hoje você se permita ir com mais calma.' : 'Você não está sozinho nisso.', cientifico: 'A psicologia oferece caminhos com base em evidências para lidar com isso.', reflexivo: 'Que pergunta a vida está fazendo a você hoje?', institucional: 'Atendimento psicológico com ética, sigilo e cuidado.', educativo: 'Entender o que acontece é o primeiro passo para cuidar.' }[tone] || '';
   switch (task) {
-    case 'titulos': return [`O que ninguém te contou sobre ${base}`, `${base}: 3 pontos para refletir`, `Você já pensou em ${base} desta forma?`, `${base} não é fraqueza — é um sinal`, `Um convite a olhar para ${base} com mais gentileza`, `Mitos e verdades sobre ${base}`].map((x, i) => `${i + 1}. ${x}`).join('\n');
-    case 'legenda': return `[GANCHO — uma frase que gere identificação sobre ${base}]\n\n[CONTEXTO — 2 a 3 frases explicando, com linguagem ${TONES[tone].toLowerCase()}]\n\n[REFLEXÃO OU DICA PRÁTICA]\n\n[CONVITE] Salve este post e compartilhe com quem precisa ler isso hoje.\n\n${signature()}\n\n${tags}\n\nLimite da rede (${network}): ${len} caracteres.`;
-    case 'roteiro': return `ROTEIRO (30–60s) — ${base}\n\n0–3s  Gancho: pergunta direta ao público.\n3–15s  Contexto: por que o tema importa.\n15–40s  2 ou 3 pontos principais (um por corte).\n40–55s  Fechamento acolhedor.\n55–60s  Chamada: "Salve e compartilhe" + assinatura.\n\nTexto na tela: frases curtas, fonte da marca, legenda automática ativada.`;
-    case 'calendario': return ['Seg — Reflexão (post vertical)', 'Ter — Psicoeducação (carrossel)', 'Qua — Story com pergunta', 'Qui — Neurociência/EMDR (post)', 'Sex — Divulgação profissional', 'Sáb — Frase curta (story)'].map((x) => `${x}: ${base}`).join('\n') + '\n\nDica: use "Semana temática" na Agenda para gerar as artes automaticamente.';
-    case 'adaptar': return `${base.slice(0, len)}\n\n— Caracteres: ${base.length}/${len} (${network})${base.length > len ? '\n⚠️ Texto acima do limite: reduza.' : ''}`;
+    case 'livre':
+    case 'reflexao': {
+      const r = [ph[0], ph[3], ph[6], toneLine].filter(Boolean).join(' ');
+      if (task === 'reflexao') return `${r}\n\n${signature()}`;
+      return `✨ ${t('Ideias do Frankie sobre')} "${c.theme}"\n\n📝 ${t('Reflexão')}:\n${r}\n\n💬 ${t('Frases para artes')}:\n${pick(ph, 6, 1).map((x, i) => `${i + 1}. ${x}`).join('\n')}\n\n🗂️ ${t('Carrossel')}: ${c.questions.title}\n${c.questions.items.map((x, i) => `${i + 1}. ${x}`).join('\n')}\n\n📋 ${t('Lista de cuidados')}: ${c.list.title}\n${c.list.items.map((x) => `• ${x}`).join('\n')}\n\n📱 ${t('Legenda pronta')}:\n${c.caption}`;
+    }
+    case 'titulos': return [c.bright ? `O que ${c.g.o} pode ensinar sobre a vida` : `O que ninguém te contou sobre ${c.g.o}`, `${c.theme}: 3 pontos para refletir`, `Você já pensou ${c.g.no} desta forma?`, ph[1], `Um convite a olhar para ${c.g.o} com mais gentileza`, c.bright ? `${c.theme} e saúde emocional: o que a psicologia diz` : `Mitos e verdades sobre ${c.g.o}`, c.questions.title, c.list.title].map((x, i) => `${i + 1}. ${x}`).join('\n');
+    case 'legenda': return `${ph[0]}\n\n${c.text}${toneLine ? ' ' + toneLine : ''}\n\n${signature()}\n\n${tags}`.slice(0, len);
+    case 'roteiro': return `ROTEIRO (30–60s) — ${c.theme}\n\n0–3s  ${t('Gancho')}: "${ph[2]}"\n3–15s  ${t('Contexto')}: ${ph[0]}\n15–40s  ${t('Três pontos')} (${t('um por corte')}):\n  • ${c.list.items[0]}\n  • ${c.list.items[1]}\n  • ${c.list.items[2]}\n40–55s  ${t('Fechamento')}: "${ph[5]}"\n55–60s  ${t('Chamada')}: "Salve e compartilhe com quem precisa." + ${signature()}\n\n${t('Texto na tela: frases curtas, fonte da marca, legenda automática ativada.')}`;
+    case 'calendario': {
+      const d = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      const kinds = ['Post vertical', 'Carrossel', 'Story com pergunta', 'Post quadrado', 'Lista de dicas', 'Story curto'];
+      const items = [ph[0], c.questions.title, c.questions.items[1], ph[4], c.list.title, ph[7]];
+      return d.map((x, i) => `${x} — ${kinds[i]}: ${items[i]}`).join('\n') + `\n\n${t('Dica: use "Semana temática" na Agenda para gerar as artes automaticamente.')}`;
+    }
+    case 'adaptar': {
+      if (!isLong) return assisted({ task: 'legenda', text, tone, network });
+      const cut = base.length > len ? base.slice(0, len - 1).replace(/\s+\S*$/, '') + '…' : base;
+      const extra = network === 'WhatsApp' ? cut.replace(/#[^\s#]+/g, '').trim() : network === 'LinkedIn' ? cut.replace(/(#[^\s#]+\s*){4,}$/, '').trim() + '\n\n#psicologia #saudemental' : cut;
+      return `${extra}\n\n— ${base.length}/${len} ${t('caracteres')} (${network})`;
+    }
+    case 'revisao': { if (!raw) return null; const { out, changes } = fixText(raw); return `${out}\n\n— ${t('Alterações')}: ${changes.length ? changes.join('; ') : t('nenhuma correção automática necessária. Para revisão de estilo, conecte o Frankie (IA).')}`; }
+    case 'resumo': {
+      if (!raw) return null;
+      const ss = fixText(raw).out.split(/(?<=[.!?…])\s+/);
+      const top = ss.length <= 2 ? ss : [ss[0], ...ss.slice(1).map((x, i) => [x, i]).sort((a, b) => b[0].length - a[0].length).slice(0, Math.min(3, Math.ceil(ss.length / 2))).sort((a, b) => a[1] - b[1]).map((x) => x[0])];
+      return `${top.join(' ')}\n\n— ${t('Resumo em {n} frases', { n: top.length })}`;
+    }
+    case 'publico': {
+ const who = (audience || '').trim();
+      const open = !who ? '' : /pais|mães|família/i.test(who) ? 'Para mães, pais e famílias:' : /adolesc|jovem/i.test(who) ? 'Para você que é jovem:' : /casal|casais/i.test(who) ? 'Para casais:' : /igreja|cristã|fé/i.test(who) ? 'Para quem caminha na fé:' : `Para ${who}:`;
+      return `${open ? open + '\n\n' : ''}${fixText(raw || ph[0]).out}\n\n${toneLine}`;
+    }
     default: return null;
   }
 }
@@ -111,7 +159,7 @@ export async function render(view) {
     let text; let ai = false;
     try {
       if (hasAI) { text = await callAI(payload); ai = true; }
-      else { text = assisted(payload); if (!text) { out.innerHTML = `<div class="card" style="margin-top:12px">${t('Esta tarefa precisa da IA conectada. No modo assistido estão disponíveis: Títulos, Legenda, Roteiro, Calendário e Adaptar.')}</div>`; return; } }
+      else { text = assisted(payload); if (!text) { out.innerHTML = `<div class="card" style="margin-top:12px">${payload.task === 'traducao' ? t('A tradução precisa do Frankie (IA) conectado.') : t('Escreva o texto no campo acima para o Frankie trabalhar.')}</div>`; return; } }
     } catch (e) { out.innerHTML = `<div class="card" style="margin-top:12px">${e.message === 'no-endpoint' ? t('IA não configurada.') : t('Falha ao gerar: {e}', { e: esc(e.message) })}</div>`; return; }
     out.innerHTML = `<div class="card" style="margin-top:12px">
       <p class="notice ${ai ? 'ai' : ''} small" style="margin:0 0 10px">${ai ? t('🤖 Conteúdo gerado por IA. Verifique fatos, tom e ética. Referências citadas pela IA NÃO são confiáveis: confirme na Biblioteca científica.') : t('Modo assistido: estrutura gerada por fórmulas (sem IA).')}</p>
