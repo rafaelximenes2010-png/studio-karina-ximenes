@@ -929,4 +929,13 @@ export const DICT = {
   "IA indisponível agora ({e}). Usei o modo assistido.": { en: "AI unavailable right now ({e}). Used assisted mode.", es: "IA no disponible ahora ({e}). Usé el modo asistido." },
   "Digite o código de acesso.": { en: "Enter the access code.", es: "Escribe el código de acceso." },
   "Frankie com IA ligado!": { en: "Frankie AI is on!", es: "¡Frankie con IA activado!" },
+  "Escolha um modelo: ele já vem com capa, logomarca e a estrutura pronta.": { en: "Pick a template: it comes with a cover, logo and ready structure.", es: "Elige un modelo: viene con portada, logotipo y estructura lista." },
+  "Introdução, método, resultados e referências": { en: "Introduction, method, results and references", es: "Introducción, método, resultados y referencias" },
+  "Objetivo, desenvolvimento e conclusão": { en: "Purpose, development and conclusion", es: "Objetivo, desarrollo y conclusión" },
+  "Módulos com conceitos e exercícios": { en: "Modules with concepts and exercises", es: "Módulos con conceptos y ejercicios" },
+  "O que é, sinais e quando buscar ajuda": { en: "What it is, signs and when to seek help", es: "Qué es, señales y cuándo buscar ayuda" },
+  "Tema e pontos principais, uma ideia por página": { en: "Theme and key points, one idea per page", es: "Tema y puntos principales, una idea por página" },
+  "Objetivos, conteúdo e atividades": { en: "Goals, content and activities", es: "Objetivos, contenido y actividades" },
+  "Para quem é, passo a passo e dicas": { en: "Who it is for, step by step and tips", es: "Para quién es, paso a paso y consejos" },
+  "Capa, capítulos e citações": { en: "Cover, chapters and quotes", es: "Portada, capítulos y citas" },
 };

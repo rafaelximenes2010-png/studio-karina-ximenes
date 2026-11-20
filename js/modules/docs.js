@@ -18,15 +18,28 @@ const KINDS = {
   guia: { label: 'Guia', outline: [['h1', 'Para quem é este guia'], ['p', ''], ['h1', 'Passo a passo'], ['olist', ''], ['h1', 'Dicas'], ['list', '']] },
   ebook: { label: 'E-book', outline: [['h1', 'Introdução'], ['p', ''], ['pagebreak', ''], ['h1', 'Capítulo 1'], ['p', ''], ['quote', ''], ['pagebreak', ''], ['h1', 'Capítulo 2'], ['p', ''], ['pagebreak', ''], ['h1', 'Conclusão'], ['p', '']] },
 };
+// Aparência de cada modelo: cor da capa e descrição curta
+const LOOK = {
+  artigo: ['#435B49', 'Introdução, método, resultados e referências'],
+  relatorio: ['#91A595', 'Objetivo, desenvolvimento e conclusão'],
+  apostila: ['#A8834F', 'Módulos com conceitos e exercícios'],
+  psicoeducativo: ['#8E7CB8', 'O que é, sinais e quando buscar ajuda'],
+  apresentacao: ['#33382F', 'Tema e pontos principais, uma ideia por página'],
+  aula: ['#C9A227', 'Objetivos, conteúdo e atividades'],
+  guia: ['#5F8A72', 'Para quem é, passo a passo e dicas'],
+  ebook: ['#8C6239', 'Capa, capítulos e citações'],
+};
+const cover = (k, label) => `<span class="doc-cover" style="--c:${LOOK[k]?.[0] || '#435B49'}" aria-hidden="true"><i class="band"></i><img src="${logoSrc}" alt=""><b>${esc(label)}</b><i class="ln"></i><i class="ln s"></i><i class="ln"></i><i class="ln s"></i></span>`;
 const BLOCKS = { h1: 'Título', h2: 'Subtítulo', h3: 'Tópico', p: 'Parágrafo', list: 'Lista', olist: 'Lista numerada', quote: 'Citação longa', note: 'Nota/destaque', table: 'Tabela', image: 'Imagem', pagebreak: 'Quebra de página' };
 
 export async function render(view, params) {
   if (params.name === 'documento' && params.id) return editor(view, params.id);
   const docs = await db.all('docs');
   view.innerHTML = `<div class="eyebrow">${t('Documentos e PDFs')}</div><h1 class="h-title" style="margin:4px 0 12px">${t('Seus documentos')}</h1>
-    <div class="grid c2">${Object.entries(KINDS).map(([k, v]) => `<button class="card" data-kind="${k}" style="text-align:left;cursor:pointer"><span style="color:var(--primary)">${I.doc}</span><b style="display:block;margin-top:6px">${t(v.label)}</b><span class="xs muted">${t('Modelo com estrutura')}</span></button>`).join('')}</div>
+    <p class="small muted" style="margin:-4px 0 14px">${t('Escolha um modelo: ele já vem com capa, logomarca e a estrutura pronta.')}</p>
+    <div class="doc-grid">${Object.entries(KINDS).map(([k, v]) => `<button class="doc-tpl" data-kind="${k}">${cover(k, t(v.label))}<span class="doc-meta"><b>${t(v.label)}</b><small>${t(LOOK[k]?.[1] || 'Modelo com estrutura')}</small></span></button>`).join('')}</div>
     <h2 class="h-section">${t('Recentes')}</h2>
-    ${docs.map((d) => `<a class="list-item" href="#/documento/${d.id}"><span class="thumb">${I.doc}</span><span class="grow"><b>${esc(d.title)}</b><span class="xs muted">${t(KINDS[d.kind]?.label || '')} · ${fmtDate(d.updatedAt, locale())}</span></span></a>`).join('') || `<div class="empty small">${t('Nenhum documento ainda.')}</div>`}`;
+    ${docs.map((d) => `<a class="list-item" href="#/documento/${d.id}"><span class="doc-mini" style="--c:${LOOK[d.kind]?.[0] || '#435B49'}"><i></i></span><span class="grow"><b>${esc(d.title)}</b><span class="xs muted">${t(KINDS[d.kind]?.label || '')} · ${fmtDate(d.updatedAt, locale())}</span></span></a>`).join('') || `<div class="empty small">${t('Nenhum documento ainda.')}</div>`}`;
   view.onclick = async (e) => {
     const b = e.target.closest('[data-kind]'); if (!b) return;
     const k = KINDS[b.dataset.kind];
