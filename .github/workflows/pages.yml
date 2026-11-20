@@ -72,6 +72,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Montar site (somente arquivos do app)
         run: |
+          python3 scripts/gen_sw.py   # garante a impressão digital (BUILD) desta publicação
           mkdir _site
           cp -r index.html instalar.html manifest.webmanifest sw.js css js assets _site/
           [ -f frankie.json ] && cp frankie.json _site/ || true

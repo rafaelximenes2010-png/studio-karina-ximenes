@@ -5,7 +5,7 @@ import { prefs, db } from './lib/store.js';
 import { generateMonth, monthsAhead } from './lib/plan.js';
 import { I, $, $$, toast } from './ui.js';
 
-export const VERSION = '2.1.0';
+export const VERSION = '2.1.1';
 
 const ROUTES = {
   '': () => import('./modules/home.js'),
@@ -119,11 +119,14 @@ async function boot() {
   await route();
   ensurePlan().then((n) => { if (n && !location.hash.includes('editor')) toast(t('{n} artes programadas para os próximos meses', { n })); }).catch(console.error);
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').then((reg) => {
-      reg.addEventListener('updatefound', () => {
-        const w = reg.installing;
-        w?.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) toast(t('Nova versão disponível. Feche e abra o app para atualizar.'), 6000); });
-      });
+    // Versão nova publicada: troca tudo de uma vez e recarrega uma única vez (sem misturar arquivos antigos e novos)
+    const hadController = !!navigator.serviceWorker.controller; let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloaded || location.hash.includes('editor')) return;
+      reloaded = true; toast(t('Atualizando o app...'), 1500); setTimeout(() => location.reload(), 600);
+    });
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((reg) => {
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
     }).catch(() => {});
   }
   if (!p.onboarded) setTimeout(() => import('./modules/profile.js').then((m) => m.showTutorial(true)), 2300);

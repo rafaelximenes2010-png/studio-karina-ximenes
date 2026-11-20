@@ -942,4 +942,5 @@ export const DICT = {
   "Fotos do mês": { en: "Photos of the month", es: "Fotos del mes" },
   "Toque na foto para usar na arte.": { en: "Tap a photo to use it in the art.", es: "Toca una foto para usarla en el arte." },
   "Ver maiores": { en: "See larger", es: "Ver más grandes" },
+  "Atualizando o app...": { en: "Updating the app...", es: "Actualizando la app..." },
 };

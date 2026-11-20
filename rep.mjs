@@ -1,0 +1,10 @@
+import { chromium, devices } from 'playwright';
+const b = await chromium.launch(); const p = await (await b.newContext({ ...devices['iPhone 13'] })).newPage();
+p.on('pageerror', e => console.log('ERR', e.message)); p.on('console', m => { if (m.type()==='error') console.log('CONSOLE', m.text()); });
+await p.addInitScript(()=>{localStorage.setItem('studio-karina:prefs', JSON.stringify({onboarded:true, tourDone:true}));});
+await p.goto('http://localhost:8080/#/rapido?f=story&th=logoterapia'); await p.waitForTimeout(2500);
+await p.click('[data-sp=montanhas]'); await p.waitForTimeout(2000);
+const id = await p.evaluate(()=>sessionStorage.getItem('sk-photo')); await p.evaluate((id)=>sessionStorage.setItem('sk-paisagem', id), id);
+await p.goto('http://localhost:8080/#/rapido?f=story&th=sentido'); await p.goto('http://localhost:8080/#/rapido?f=story&th=logoterapia'); await p.reload(); await p.waitForTimeout(3000);
+console.log(await p.evaluate(()=>[document.querySelector('#cols')?'cols ok':'no cols', document.querySelectorAll('#g canvas').length]));
+await p.screenshot({path:'/tmp/rep.png', fullPage:true}); await b.close();

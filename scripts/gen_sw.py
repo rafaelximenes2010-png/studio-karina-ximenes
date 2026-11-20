@@ -1,12 +1,19 @@
 """Atualiza a lista de arquivos do cache offline (sw.js) e a VERSION. Uso: python3 scripts/gen_sw.py [versão]"""
-import os, re, json, sys
+import os, re, json, sys, hashlib
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 files = ['./', './index.html', './instalar.html', './manifest.webmanifest']
 for d in ['css', 'js', 'assets']:
     for dp, _, fs in os.walk(os.path.join(root, d)):
         for f in sorted(fs):
             if not f.endswith(('.txt', '.mp4')): files.append('./' + os.path.relpath(os.path.join(dp, f), root))
+# Impressão digital do conteúdo: muda a cada publicação, forçando o celular a trocar o cache inteiro de uma vez
+h = hashlib.sha256()
+for f in sorted(set(files)):
+    fp = os.path.join(root, 'index.html' if f == './' else f[2:])
+    if os.path.isfile(fp): h.update(f.encode()); h.update(open(fp, 'rb').read())
+build = h.hexdigest()[:10]
 p = os.path.join(root, 'sw.js'); s = open(p).read()
+s = re.sub(r"const BUILD = '[^']*';", f"const BUILD = '{build}';", s)
 s = re.sub(r'const CORE = \[[\s\S]*?\];', 'const CORE = ' + json.dumps(sorted(set(files)), indent=1) + ';', s)
 if len(sys.argv) > 1: s = re.sub(r"const VERSION = '[^']+'", f"const VERSION = '{sys.argv[1]}'", s)
 open(p, 'w').write(s); print(len(set(files)), 'arquivos no cache offline')
