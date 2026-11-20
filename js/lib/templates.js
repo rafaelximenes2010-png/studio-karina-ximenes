@@ -11,6 +11,13 @@ export const PALETTES = {
   dourado: { name: 'Linho dourado', bg: { type: 'solid', c1: '#EFE3CF' }, ink: BRAND.graphite, label: '#6E5530', accent: BRAND.gold, soft: '#E3D2B6', card: '#FFFDF8', cardInk: BRAND.graphite, ring: BRAND.gold },
   aurora: { name: 'Aurora sálvia', bg: { type: 'linear', c1: '#B9C7BB', c2: BRAND.cream, angle: 160 }, ink: BRAND.graphite, label: BRAND.green, accent: BRAND.gold, soft: '#D5DDD2', card: '#FFFFFF', cardInk: BRAND.graphite, ring: BRAND.green },
   floresta: { name: 'Floresta', bg: { type: 'linear', c1: BRAND.green, c2: BRAND.graphite, angle: 170 }, ink: BRAND.cream, label: '#E4D3B4', accent: BRAND.gold, soft: '#4C6352', card: BRAND.cream, cardInk: BRAND.graphite, ring: BRAND.gold },
+  // Cores alegres (pedido da Karina): amarelo, lilás e bronze — todas com contraste AA conferido em teste
+  amarelo: { name: 'Amarelo sol', mood: 'alegre', bg: { type: 'solid', c1: '#F6D365' }, ink: '#2B2A1F', label: '#5A4310', accent: '#435B49', soft: '#FBE7A1', card: '#FFFDF5', cardInk: '#33382F', ring: '#8C5A1E' },
+  manha: { name: 'Manhã dourada', mood: 'alegre', bg: { type: 'linear', c1: '#FFE6A3', c2: '#F4B860', angle: 160 }, ink: '#2B2A1F', label: '#5A4310', accent: '#435B49', soft: '#FFF2CC', card: '#FFFFFF', cardInk: '#33382F', ring: '#8C5A1E' },
+  lilas: { name: 'Lilás', mood: 'alegre', bg: { type: 'solid', c1: '#D9C8EE' }, ink: '#2E2340', label: '#3F2D5C', accent: '#7A5BA6', soft: '#E9DEF7', card: '#FFFFFF', cardInk: '#2E2340', ring: '#7A5BA6' },
+  ametista: { name: 'Ametista', mood: 'alegre', bg: { type: 'linear', c1: '#6A4E98', c2: '#4A3570', angle: 165 }, ink: '#FBF7FF', label: '#EADDFB', accent: '#E8C77A', soft: '#5E4689', card: '#F7F1FF', cardInk: '#2E2340', ring: '#E8C77A' },
+  bronze: { name: 'Bronze', mood: 'alegre', bg: { type: 'solid', c1: '#8A5A2B' }, ink: '#FFF8EE', label: '#F6E2C6', accent: '#F1C27D', soft: '#74491F', card: '#FFF8EE', cardInk: '#3A2A1A', ring: '#F1C27D' },
+  bronzeclaro: { name: 'Bronze dourado', mood: 'alegre', bg: { type: 'linear', c1: '#F0D6B4', c2: '#C9925A', angle: 170 }, ink: '#2F2418', label: '#4A3315', accent: '#8A5A2B', soft: '#F6E5CE', card: '#FFFDF8', cardInk: '#33382F', ring: '#8A5A2B' },
   linho: { name: 'Linho claro', bg: { type: 'solid', c1: '#FBF8F2' }, ink: BRAND.green, label: BRAND.green, accent: BRAND.gold, soft: '#EEE7DA', card: BRAND.cream, cardInk: BRAND.graphite, ring: BRAND.green },
 };
 
@@ -387,3 +394,14 @@ export function remake(oldPages, oldFormat, spec, o = {}) {
     return np;
   });
 }
+
+/** Grupos de cores para filtros simples */
+export const COLOR_GROUPS = {
+  todas: { label: 'Todas as cores', keys: Object.keys(PALETTES) },
+  alegres: { label: 'Alegres', keys: Object.keys(PALETTES).filter((k) => PALETTES[k].mood === 'alegre') },
+  classicas: { label: 'Clássicas da marca', keys: Object.keys(PALETTES).filter((k) => PALETTES[k].mood !== 'alegre') },
+  amarelo: { label: 'Amarelo', keys: ['amarelo', 'manha'] },
+  lilas: { label: 'Lilás', keys: ['lilas', 'ametista'] },
+  bronze: { label: 'Bronze', keys: ['bronze', 'bronzeclaro'] },
+  verde: { label: 'Verde', keys: ['verde', 'floresta', 'salvia', 'aurora'] },
+};

@@ -4,7 +4,7 @@ import { prefs, db } from './lib/store.js';
 import { generateMonth, monthsAhead } from './lib/plan.js';
 import { I, $, $$, toast } from './ui.js';
 
-export const VERSION = '2.0.3';
+export const VERSION = '2.0.4';
 
 const ROUTES = {
   '': () => import('./modules/home.js'),
