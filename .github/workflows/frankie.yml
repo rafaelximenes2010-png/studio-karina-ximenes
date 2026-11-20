@@ -1,0 +1,71 @@
+name: Publicar Frankie (IA)
+
+# Publica o backend seguro da IA (Cloudflare Worker) e conecta o app automaticamente.
+# Requer os segredos do repositório: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, ANTHROPIC_API_KEY, FRANKIE_ACCESS_CODE.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['worker/**']
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Conferir segredos
+        id: chk
+        env:
+          A: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          B: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          C: ${{ secrets.ANTHROPIC_API_KEY }}
+          D: ${{ secrets.FRANKIE_ACCESS_CODE }}
+        run: |
+          missing=""; [ -z "$A" ] && missing="$missing CLOUDFLARE_API_TOKEN"; [ -z "$B" ] && missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          [ -z "$C" ] && missing="$missing ANTHROPIC_API_KEY"; [ -z "$D" ] && missing="$missing FRANKIE_ACCESS_CODE"
+          if [ -n "$missing" ]; then echo "::warning::Segredos ausentes:$missing — Frankie não publicado (o app segue no modo assistido)."; echo "ok=false" >> $GITHUB_OUTPUT; else echo "ok=true" >> $GITHUB_OUTPUT; fi
+      - uses: actions/checkout@v4
+        if: steps.chk.outputs.ok == 'true'
+      - name: Publicar Worker
+        if: steps.chk.outputs.ok == 'true'
+        id: wr
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          secrets: |
+            ANTHROPIC_API_KEY
+            ACCESS_CODE
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ACCESS_CODE: ${{ secrets.FRANKIE_ACCESS_CODE }}
+      - name: Testar o Frankie publicado
+        if: steps.chk.outputs.ok == 'true'
+        id: test
+        env:
+          URL: ${{ steps.wr.outputs.deployment-url }}
+          CODE: ${{ secrets.FRANKIE_ACCESS_CODE }}
+          ORIGIN: https://rafaelximenes2010-png.github.io
+        run: |
+          URL="${URL%/}/"; echo "Endereço: $URL"; echo "url=$URL" >> $GITHUB_OUTPUT
+          c=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Origin: $ORIGIN" -H "Content-Type: application/json" -d '{"task":"titulos","text":"sentido"}' "$URL"); echo "sem código → $c"; [ "$c" = "401" ]
+          c=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Origin: https://site-estranho.com" -H "X-Access-Code: $CODE" -H "Content-Type: application/json" -d '{"task":"titulos","text":"sentido"}' "$URL"); echo "outra origem → $c"; [ "$c" = "403" ]
+          r=$(curl -s -X POST -H "Origin: $ORIGIN" -H "X-Access-Code: $CODE" -H "Content-Type: application/json" -d '{"task":"titulos","tone":"acolhedor","text":"sentido da vida","network":"Instagram"}' "$URL")
+          echo "$r" | head -c 600; echo; echo "$r" | grep -q '"text"' || { echo "Frankie não respondeu"; exit 1; }
+      - name: Conectar o app ao Frankie
+        if: steps.chk.outputs.ok == 'true'
+        env:
+          URL: ${{ steps.test.outputs.url }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '{ "endpoint": "%s" }\n' "$URL" > frankie.json
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frankie.json
+          git diff --cached --quiet && echo "Já conectado" || { git commit -m "Conectar app ao Frankie (IA)"; git push; }
+          # commits do bot não disparam outros workflows: publica o site explicitamente
+          gh workflow run pages.yml --ref main

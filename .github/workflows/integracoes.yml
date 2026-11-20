@@ -1,0 +1,34 @@
+name: Testar integrações externas
+
+# Crossref, PubMed, consulta de DOI e banco de imagens Wikimedia, num navegador real com internet.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 9 * * 1'   # toda segunda-feira (detecta se alguma API mudou)
+
+permissions:
+  contents: read
+
+jobs:
+  externas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Integrações externas no navegador
+        run: |
+          python3 -m http.server 8080 --bind 127.0.0.1 > /tmp/server.log 2>&1 &
+          sleep 2
+          node tests/e2e/external.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidencias-integracoes
+          path: evidence/externas/
+          retention-days: 30

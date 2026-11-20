@@ -4,7 +4,7 @@ import { prefs, db } from './lib/store.js';
 import { generateMonth, monthsAhead } from './lib/plan.js';
 import { I, $, $$, toast } from './ui.js';
 
-export const VERSION = '2.0.0';
+export const VERSION = '2.0.1';
 
 const ROUTES = {
   '': () => import('./modules/home.js'),
@@ -77,7 +77,7 @@ export async function ensurePlan({ force = false, months = prefs.get().planMonth
   for (const [y, m] of monthsAhead(new Date(), months)) {
     const key = `${y}-${String(m).padStart(2, '0')}`;
     if (done.has(key) && !force) continue;
-    for (const post of generateMonth(y, m, { days: p.planDays || [1, 3, 5], signature: p.signature, used })) {
+    for (const post of generateMonth(y, m, { days: p.planDays || [1, 3, 5], signature: (await import('./ui.js')).signature(), used })) {
       if (existing.has(post.id)) continue; // nunca sobrescreve edições da Karina
       await db.put('posts', post); added++;
     }

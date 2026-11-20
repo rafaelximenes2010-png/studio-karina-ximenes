@@ -165,7 +165,8 @@ export function lazyThumbs(root, draw) {
   $$('canvas[data-lazy]', root).forEach((c) => io.observe(c));
 }
 
-export const signature = () => prefs.get().signature || 'Karina Ximenes | Psicóloga';
+/** Assinatura das artes/legendas; inclui o CRP quando informado (exigência da publicidade profissional) */
+export const signature = () => { const p = prefs.get(); const sig = p.signature || 'Karina Ximenes | Psicóloga'; return p.crp && !sig.includes(p.crp) ? `${sig} · CRP ${p.crp}` : sig; };
 export const statusLabel = (s) => ({ ideia: t('Ideia'), rascunho: t('Rascunho'), revisao: t('Revisão'), aprovado: t('Aprovado'), publicado: t('Publicado') }[s] || s);
 export const STATUSES = ['ideia', 'rascunho', 'revisao', 'aprovado', 'publicado'];
 

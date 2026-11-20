@@ -39,10 +39,17 @@ export const TASKS = {
 export const TONES = { acolhedor: 'Acolhedor', cientifico: 'Científico', reflexivo: 'Reflexivo', institucional: 'Institucional', educativo: 'Educativo' };
 
 /** Chamada ao backend seguro */
+/** Endereço do backend: o digitado em Ajustes ou o publicado automaticamente (frankie.json) */
+export async function aiEndpoint() {
+  const p = prefs.get(); if (p.aiEndpoint) return p.aiEndpoint;
+  try { const r = await fetch('./frankie.json', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); if (/^https:\/\//.test(j.endpoint || '')) return j.endpoint; } } catch { /* offline */ }
+  return '';
+}
 export async function callAI(payload) {
-  const { aiEndpoint, aiCode } = prefs.get();
-  if (!aiEndpoint) throw new Error('no-endpoint');
-  const r = await fetch(aiEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Access-Code': aiCode || '' }, body: JSON.stringify(payload) });
+  const { aiCode } = prefs.get(); const endpoint = await aiEndpoint();
+  if (!endpoint) throw new Error('no-endpoint');
+  if (!aiCode) throw new Error(t('Informe o código de acesso do Frankie em Perfil → Ajustes.'));
+  const r = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Access-Code': aiCode || '' }, body: JSON.stringify(payload) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
   return j.text;
@@ -64,7 +71,7 @@ function assisted({ task, text, tone, network }) {
 }
 
 export async function render(view) {
-  const pr = prefs.get(); const hasAI = !!pr.aiEndpoint;
+  const hasAI = !!(await aiEndpoint());
   const texts = await db.all('texts');
   const mine = await db.all('phrases');
   let task = 'reflexao'; let tone = 'acolhedor';

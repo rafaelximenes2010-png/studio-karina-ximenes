@@ -74,6 +74,7 @@ jobs:
         run: |
           mkdir _site
           cp -r index.html manifest.webmanifest sw.js css js assets _site/
+          [ -f frankie.json ] && cp frankie.json _site/ || true
           echo "${{ github.sha }}" > _site/commit.txt
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
