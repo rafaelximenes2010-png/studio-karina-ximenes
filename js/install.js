@@ -24,7 +24,7 @@
   window.addEventListener('appinstalled', function () { show('done'); });
 
   var url = location.origin + location.pathname;
-  var msg = 'Studio Karina Ximenes — instale o app no celular: ' + url;
+  var msg = 'KXS · Studio Karina Ximenes — instale o app no celular: ' + url;
   document.getElementById('share').href = 'https://wa.me/?text=' + encodeURIComponent(msg);
 
   // service worker: necessário para o botão de instalar no Android e para funcionar offline

@@ -27,7 +27,8 @@ export async function render(view) {
     <div class="eyebrow">${t('Estúdio criativo · identidade & conteúdo')}</div>
     <h1 class="h-display">${greeting()}, ${esc(p.name || 'Karina')}.</h1>
     <p class="muted" style="max-width:520px;margin:0 0 18px">${t('Ideias que acolhem. Conteúdos que transformam. Tudo com a sua identidade visual.')}</p>
-    <div class="row"><a class="btn" href="#/criar">${I.plus}${t('Criar')}</a><a class="btn secondary" href="#/agenda">${I.calendar}${t('Ver programação')}</a></div>
+    <div class="grid c2" style="max-width:420px"><a class="btn" href="#/rapido?f=story">${I.plus}${t('Criar Story')}</a><a class="btn" href="#/rapido?f=feed">${I.plus}${t('Criar Feed')}</a></div>
+    <a class="btn sm ghost" href="#/agenda" style="margin-top:8px">${I.calendar}${t('Ver programação')}</a>
   </section>
 
   <div class="quick" style="margin-top:16px">
@@ -63,8 +64,8 @@ export async function render(view) {
     if (b.dataset.post) {
       const post = await db.get('posts', b.dataset.post);
       if (post?.projectId && await db.get('projects', post.projectId)) location.hash = `#/editor/${post.projectId}`;
-      else openSpec(spec, { postId: b.dataset.post });
-    } else openSpec(spec);
+      else (await import('./quick.js')).postArt(spec, { postId: b.dataset.post });
+    } else (await import('./quick.js')).postArt(spec);
   });
 }
 

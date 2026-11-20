@@ -33,7 +33,7 @@ function artsTab(pane, query) {
     <div class="search">${I.search}<input class="input" id="aq" type="search" placeholder="${t('Buscar por tema, palavra ou campanha')}"></div>
     <div class="chips" id="cats" style="margin-top:10px"><button class="chip" data-cat="todas" aria-pressed="true">${t('Todas')}</button>${CATEGORIES.map((c) => `<button class="chip" data-cat="${c.id}">${t(c.label)}</button>`).join('')}</div>
     <div class="chips" id="pals"><button class="chip" data-pal="todas" aria-pressed="true">${t('Todas as paletas')}</button>${Object.entries(PALETTES).map(([k, p]) => `<button class="chip" data-pal="${k}"><i style="width:14px;height:14px;border-radius:50%;background:${p.bg.type === 'solid' ? p.bg.c1 : `linear-gradient(${p.bg.c1},${p.bg.c2})`};border:1px solid #0002"></i>${t(p.name)}</button>`).join('')}</div>
-    <div class="row between" style="margin:4px 0 12px"><span class="small muted" id="count"></span><div class="seg" id="fmts">${Object.entries(FORMATS).map(([k, f]) => `<button data-fmt="${k}" aria-pressed="${k === fmt}">${t(f.label).split(' ').pop()}</button>`).join('')}</div></div>
+    <div class="row between" style="margin:4px 0 12px"><span class="small muted" id="count"></span><div class="seg" id="fmts">${[['story', 'Story'], ['portrait', 'Feed'], ['square', t('Quadrado')]].map(([k, l]) => `<button data-fmt="${k}" aria-pressed="${k === fmt}">${l}</button>`).join('')}</div></div>
     <div class="grid arts" id="grid"></div>
     <div style="text-align:center;margin:18px 0"><button class="btn ghost" id="more">${t('Carregar mais')}</button></div>`;
   if (cat !== 'todas') $$('#cats .chip', pane).forEach((c) => c.setAttribute('aria-pressed', c.dataset.cat === cat));
@@ -75,9 +75,10 @@ export function preview(spec0) {
   const p = phraseById(spec.phraseId);
   const s = sheet(`<div class="row between"><span class="eyebrow">${esc(t(CATEGORIES.find((c) => c.id === p.cat)?.label))}</span><button class="icon-btn" data-close aria-label="${t('Fechar')}">${I.close}</button></div>
     <div style="display:grid;place-items:center;margin:8px 0"><canvas id="big" style="max-height:46vh;width:auto;border-radius:12px;box-shadow:0 10px 30px #0002"></canvas></div>
-    <div class="seg" id="fm" style="display:flex;margin:0 auto 10px;width:max-content">${Object.entries(FORMATS).map(([k, f]) => `<button data-f="${k}">${t(f.label).split(' ').pop()}</button>`).join('')}</div>
-    <div class="grid c2"><button class="btn" id="edit">${I.wand}${t('Editar arte')}</button><button class="btn secondary" id="sched">${I.calendar}${t('Programar')}</button></div>
-    <div class="grid c2" style="margin-top:8px"><button class="btn ghost" id="dl">${I.share}${t('Baixar / compartilhar')}</button><button class="btn ghost" id="cap">${I.copy}${t('Copiar legenda')}</button></div>
+    <div class="seg" id="fm" style="display:flex;margin:0 auto 10px;width:max-content">${[['story', 'Story'], ['portrait', 'Feed'], ['square', t('Quadrado')]].map(([k, l]) => `<button data-f="${k}">${l}</button>`).join('')}</div>
+    <button class="btn block" id="postnow" style="min-height:52px">${I.share}${t('Postar no Instagram')}</button>
+    <div class="grid c2" style="margin-top:8px"><button class="btn secondary" id="edit">${I.wand}${t('Ajustar')}</button><button class="btn secondary" id="sched">${I.calendar}${t('Programar')}</button></div>
+    <div class="grid c2" style="margin-top:8px"><button class="btn ghost" id="dl">${I.download}${t('Baixar')}</button><button class="btn ghost" id="cap">${I.copy}${t('Copiar legenda')}</button></div>
     <h3 class="small" style="margin:16px 0 8px">${t('Layouts')}</h3><div class="hscroll" id="lays" style="grid-auto-columns:96px"></div>
     <h3 class="small" style="margin:12px 0 8px">${t('Paletas')}</h3><div class="hscroll" id="pals" style="grid-auto-columns:96px"></div>`, { label: t('Prévia da arte') });
   const big = $('#big', s.el);
@@ -99,6 +100,7 @@ export function preview(spec0) {
     if (pl) { spec.palette = pl.dataset.p; paint(); }
   });
   $('#edit', s.el).onclick = () => { s.close(); openSpec(spec); };
+  $('#postnow', s.el).onclick = async () => { s.close(); (await import('./quick.js')).postArt({ ...spec }); };
   $('#cap', s.el).onclick = () => copyText(captionFor(p, { signature: signature() }));
   $('#dl', s.el).onclick = async () => {
     toast(t('Gerando arquivos...'));

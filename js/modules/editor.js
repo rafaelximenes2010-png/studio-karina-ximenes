@@ -42,21 +42,25 @@ export async function render(view, { id }) {
       <span class="xs muted" id="e-saved" aria-live="polite"></span>
       <button class="icon-btn" id="e-undo" aria-label="${t('Desfazer')}">${I.undo}</button>
       <button class="icon-btn" id="e-redo" aria-label="${t('Refazer')}">${I.redo}</button>
-      <button class="btn sm" id="e-export">${I.download}<span>${t('Exportar')}</span></button>
+      <button class="btn sm" id="e-export">${I.share}<span>${t('Postar')}</span></button>
     </div>
     <div class="ed-stage" id="stage"><canvas id="cv" aria-label="${t('Área de edição da arte')}" role="img"></canvas></div>
     <div class="ed-props" id="props" hidden></div>
     <div class="ed-pages" id="pages"></div>
     <div class="ed-tools" role="toolbar" aria-label="${t('Ferramentas')}">
       <button data-tool="text">${I.text}${t('Texto')}</button>
+      <button data-tool="frankie">${I.sparkle}${t('Frases')}</button>
       <button data-tool="image">${I.image}${t('Foto')}</button>
-      <button data-tool="shape">${I.shape}${t('Forma')}</button>
-      <button data-tool="logo">${I.logo}${t('Logo')}</button>
-      <button data-tool="bg">${I.bg}${t('Fundo')}</button>
-      <button data-tool="style">${I.wand}${t('Estilo')}</button>
-      <button data-tool="layers">${I.layers}${t('Camadas')}</button>
-      <button data-tool="format">${I.pages}${t('Formato')}</button>
-      <button data-tool="frankie">${I.sparkle}Frankie</button>
+      <button data-tool="colors">${I.palette}${t('Cores')}</button>
+      <button data-tool="fmtquick">${I.pages}Story/Feed</button>
+      <button data-tool="more" id="t-more">${I.more}${t('Mais')}</button>
+      <button data-tool="style" class="adv" hidden>${I.wand}${t('Estilo')}</button>
+      <button data-tool="addtext" class="adv" hidden>${I.plus}${t('Novo texto')}</button>
+      <button data-tool="shape" class="adv" hidden>${I.shape}${t('Forma')}</button>
+      <button data-tool="logo" class="adv" hidden>${I.logo}${t('Logo')}</button>
+      <button data-tool="bg" class="adv" hidden>${I.bg}${t('Fundo')}</button>
+      <button data-tool="layers" class="adv" hidden>${I.layers}${t('Camadas')}</button>
+      <button data-tool="format" class="adv" hidden>${I.grid}${t('Formatos')}</button>
     </div></div>`;
   
   const cv = $('#cv', view); const ctx = cv.getContext('2d'); const stage = $('#stage', view); const props = $('#props', view);
@@ -239,7 +243,14 @@ export async function render(view, { id }) {
   $('.ed-tools', view).addEventListener('click', async (e) => {
     const b = e.target.closest('[data-tool]'); if (!b) return;
     const tool = b.dataset.tool; cropMode = false;
-    if (tool === 'text') addLayer({ id: uid('l'), type: 'text', text: t('Seu texto aqui'), x: 120, y: Math.round(F().h * 0.42), w: F().w - 240, size: 72, font: 'serif', weight: 400, color: isDark(page().bg) ? BRAND.cream : BRAND.graphite, align: 'center', lh: 1.2 });
+    if (tool === 'more') { const on = b.getAttribute('aria-pressed') !== 'true'; $$('.ed-tools .adv', view).forEach((x) => (x.hidden = !on)); b.setAttribute('aria-pressed', on); return; }
+    if (tool === 'text') {
+      // modo simples: edita o texto principal da arte (o maior); sem texto, cria um
+      const main = [...page().layers].filter((x) => x.type === 'text' && !x.hidden).sort((a, c) => c.size * c.text.length - a.size * a.text.length)[0];
+      if (main) { selId = main.id; showPanel('layer'); draw(); setTimeout(() => $('#p-text', props)?.focus(), 60); return; }
+    }
+    if (tool === 'colors' || tool === 'fmtquick') { selId = null; showPanel(panel === tool ? null : tool); draw(); return; }
+    if (tool === 'text' || tool === 'addtext') addLayer({ id: uid('l'), type: 'text', text: t('Seu texto aqui'), x: 120, y: Math.round(F().h * 0.42), w: F().w - 240, size: 72, font: 'serif', weight: 400, color: isDark(page().bg) ? BRAND.cream : BRAND.graphite, align: 'center', lh: 1.2 });
     if (tool === 'image') { selId = null; addImageAsset(await chooseImage()); }
     if (tool === 'shape') showPanel('shapes');
     if (tool === 'logo') { const s = Math.round(F().w * 0.16); addLayer({ id: uid('l'), type: 'logo', x: Math.round((F().w - s) / 2), y: Math.round((F().h - s) / 2), w: s, h: s, mask: 'circle', ring: BRAND.gold }); }
@@ -266,12 +277,12 @@ export async function render(view, { id }) {
   // ---------- Painéis de propriedades ----------
   const sw = (key, cur, extra = '') => `<div class="swatches" data-sw="${key}">${extra}${SWATCHES.map((c) => `<button style="background:${c}" data-c="${c}" aria-label="${c}" aria-pressed="${String(cur).toUpperCase() === c.toUpperCase()}"></button>`).join('')}<input type="color" data-color="${key}" value="${/^#[0-9a-f]{6}$/i.test(cur || '') ? cur : '#435B49'}" aria-label="${t('Outra cor')}"></div>`;
   const range = (key, label, val, min, max, step = 1) => `<label class="field"><span>${label} <output>${val}</output></span><input type="range" data-r="${key}" min="${min}" max="${max}" step="${step}" value="${val}"></label>`;
-  const actions = (l) => `<div class="row" style="margin-top:10px">
+  const actions = (l) => `<details class="fold" style="margin-top:10px"><summary>${t('Organizar')}</summary><div><div class="row">
       <button class="btn sm secondary" data-a="dup">${I.dup}${t('Duplicar')}</button>
       <button class="btn sm secondary" data-a="up" aria-label="${t('Trazer para frente')}">${I.up}</button>
       <button class="btn sm secondary" data-a="down" aria-label="${t('Enviar para trás')}">${I.down}</button>
       <button class="btn sm secondary" data-a="lock" aria-pressed="${!!l.locked}">${I.lock}${l.locked ? t('Destravar') : t('Travar')}</button>
-      <button class="btn sm danger" data-a="del">${I.trash}</button></div>`;
+      </div></div></details><button class="btn sm danger" data-a="del" style="margin-top:10px">${I.trash}${t('Remover')}</button>`;
 
   function showPanel(kind) {
     panel = kind; props.hidden = !kind;
@@ -281,19 +292,21 @@ export async function render(view, { id }) {
     let html = '';
     if (kind === 'layer' && l) {
       if (l.type === 'text') html = `<textarea class="input" id="p-text" rows="3" style="min-height:76px">${esc(l.text)}</textarea>
-        <div class="grid c2" style="margin-top:8px"><label class="field"><span>${t('Fonte')}</span><select class="input" data-s="font">${Object.entries(FONTS).map(([k, f]) => `<option value="${k}" ${l.font === k ? 'selected' : ''}>${f.label}</option>`).join('')}</select></label>
-        ${range('size', t('Tamanho'), l.size, 14, 260)}</div>
+        <div style="margin-top:8px">${range('size', t('Tamanho da letra'), l.size, 14, 260)}</div>
+        <label class="field"><span>${t('Cor do texto')}</span>${sw('color', l.color)}</label>
+        <details class="fold" style="margin-top:10px"><summary>${t('Mais ajustes')}</summary><div>
+        <label class="field"><span>${t('Fonte')}</span><select class="input" data-s="font">${Object.entries(FONTS).map(([k, f]) => `<option value="${k}" ${l.font === k ? 'selected' : ''}>${f.label}</option>`).join('')}</select></label>
         <div class="row" style="margin:6px 0"><div class="seg">${['left', 'center', 'right'].map((a) => `<button data-set="align" data-v="${a}" aria-pressed="${l.align === a}">${{ left: '⇤', center: '↔', right: '⇥' }[a]}</button>`).join('')}</div>
           <div class="seg"><button data-tog="weight" aria-pressed="${(l.weight || 400) >= 600}"><b>B</b></button><button data-tog="italic" aria-pressed="${!!l.italic}"><i>I</i></button><button data-tog="upper" aria-pressed="${!!l.upper}">Aa</button><button data-tog="shadow" aria-pressed="${!!l.shadow}">${t('Sombra')}</button></div></div>
-        <label class="field"><span>${t('Cor do texto')}</span>${sw('color', l.color)}</label>
         <label class="field" style="margin-top:8px"><span>${t('Caixa de fundo')}</span>${sw('bg', l.bg, `<button data-c="" aria-pressed="${!l.bg}" style="background:linear-gradient(135deg,#fff 45%,#d33 46%,#d33 54%,#fff 55%)" aria-label="${t('Sem caixa')}"></button>`)}</label>
-        <div class="grid c2" style="margin-top:8px">${range('lh', t('Entrelinhas'), l.lh || 1.22, 0.9, 2, 0.02)}${range('ls', t('Espaçamento'), l.ls || 0, -4, 20)}${range('opacity', t('Opacidade'), l.opacity ?? 1, 0.1, 1, 0.05)}${range('rot', t('Rotação'), l.rot || 0, 0, 359)}</div>`;
+        <div class="grid c2" style="margin-top:8px">${range('lh', t('Entrelinhas'), l.lh || 1.22, 0.9, 2, 0.02)}${range('ls', t('Espaçamento'), l.ls || 0, -4, 20)}${range('opacity', t('Opacidade'), l.opacity ?? 1, 0.1, 1, 0.05)}${range('rot', t('Rotação'), l.rot || 0, 0, 359)}</div></div></details>`;
       if (l.type === 'image') html = `<div class="row"><button class="btn sm" data-a="replace">${I.image}${t('Trocar foto')}</button><button class="btn sm ${cropMode ? 'gold' : 'secondary'}" data-a="crop">${cropMode ? t('Concluir enquadramento') : t('Ajustar enquadramento')}</button></div>
         ${cropMode ? `<p class="xs muted">${t('Arraste a foto dentro da moldura. Use dois dedos (ou o controle) para aproximar.')}</p>${range('zoom', t('Zoom'), l.zoom || 1, 1, 5, 0.05)}` : ''}
         <label class="field" style="margin-top:8px"><span>${t('Moldura')}</span><div class="chips">${Object.entries(MASKS).map(([k, v]) => `<button class="chip" data-mask="${k}" aria-pressed="${(l.mask === 'rect' && l.radius && k === 'round') || l.mask === k}">${t(v)}</button>`).join('')}</div></label>
         <label class="field"><span>${t('Filtro')}</span><div class="chips">${Object.entries(FILTERS).map(([k, f]) => `<button class="chip" data-filter="${k}" aria-pressed="${(l.filter || 'none') === k}">${t(f.label)}</button>`).join('')}</div></label>
+        <details class="fold" style="margin-top:10px"><summary>${t('Mais ajustes')}</summary><div>
         <label class="field"><span>${t('Contorno')}</span>${sw('frame', l.frame, `<button data-c="" aria-pressed="${!l.frame}" style="background:linear-gradient(135deg,#fff 45%,#d33 46%,#d33 54%,#fff 55%)" aria-label="${t('Sem contorno')}"></button>`)}</label>
-        <div class="grid c2" style="margin-top:8px">${range('frameW', t('Espessura do contorno'), l.frameW || 10, 2, 40)}${range('overlay', t('Escurecer (legibilidade)'), l.overlay || 0, 0, 0.9, 0.05)}${range('opacity', t('Opacidade'), l.opacity ?? 1, 0.1, 1, 0.05)}${range('rot', t('Rotação'), l.rot || 0, 0, 359)}</div>
+        <div class="grid c2" style="margin-top:8px">${range('frameW', t('Espessura do contorno'), l.frameW || 10, 2, 40)}${range('overlay', t('Escurecer (legibilidade)'), l.overlay || 0, 0, 0.9, 0.05)}${range('opacity', t('Opacidade'), l.opacity ?? 1, 0.1, 1, 0.05)}${range('rot', t('Rotação'), l.rot || 0, 0, 359)}</div></div></details>
         ${l.assetId ? '<p class="xs muted" id="lic"></p>' : ''}`;
       if (l.type === 'shape') html = `<label class="field"><span>${t('Preenchimento')}</span>${sw('fill', l.fill, `<button data-c="" aria-pressed="${!l.fill}" style="background:linear-gradient(135deg,#fff 45%,#d33 46%,#d33 54%,#fff 55%)" aria-label="${t('Nenhum')}"></button>`)}</label>
         <label class="field" style="margin-top:8px"><span>${t('Contorno')}</span>${sw('stroke', l.stroke, `<button data-c="" aria-pressed="${!l.stroke}" style="background:linear-gradient(135deg,#fff 45%,#d33 46%,#d33 54%,#fff 55%)" aria-label="${t('Nenhum')}"></button>`)}</label>
@@ -304,6 +317,8 @@ export async function render(view, { id }) {
         <div class="grid c2" style="margin-top:8px">${range('opacity', t('Opacidade'), l.opacity ?? 1, 0.3, 1, 0.05)}</div>`;
       html += actions(l);
     }
+    if (kind === 'colors') html = `<h3 class="small" style="margin-bottom:10px">${t('Escolha as cores')}</h3><div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">${Object.entries(PALETTES).map(([k, p]) => `<button data-pal="${k}" aria-label="${t(p.name)}" style="border:2px solid ${proj.spec?.palette === k ? 'var(--primary)' : 'var(--line)'};border-radius:14px;padding:0;overflow:hidden;cursor:pointer;background:none"><span style="display:block;height:44px;background:${p.bg.type === 'solid' ? p.bg.c1 : `linear-gradient(${p.bg.c1},${p.bg.c2})`};position:relative"><b style="position:absolute;inset:0;display:grid;place-items:center;color:${p.ink};font-family:var(--serif);font-size:20px">Aa</b></span><span class="xs" style="display:block;padding:4px;color:var(--text-2)">${t(p.name)}</span></button>`).join('')}</div>`;
+    if (kind === 'fmtquick') html = `<h3 class="small" style="margin-bottom:10px">${t('Onde vai postar?')}</h3><div class="grid c2">${[['story', 'Story', '9:16'], ['portrait', 'Feed', '4:5']].map(([k, l2, r]) => `<button class="btn ${proj.format === k ? '' : 'secondary'}" data-fmt="${k}" style="min-height:58px;flex-direction:column;gap:0">${l2}<span class="xs" style="opacity:.8">${r}</span></button>`).join('')}</div>`;
     if (kind === 'shapes') html = `<h3 class="small" style="margin-bottom:8px">${t('Adicionar forma')}</h3><div class="chips">${[['rect', t('Retângulo')], ['round', t('Cartão')], ['ellipse', t('Círculo')], ['arch', t('Arco')], ['leaf', t('Folha')], ['line', t('Linha')], ['frame', t('Moldura')]].map(([k, v]) => `<button class="chip" data-add-shape="${k}">${v}</button>`).join('')}</div>`;
     if (kind === 'bg') {
       const bg = page().bg || {};
@@ -373,7 +388,7 @@ export async function render(view, { id }) {
         page().bg = { ...p.bg }; page().stampRing = p.ring;
         for (const x of page().layers) for (const k of ['color', 'fill', 'stroke', 'ring', 'bg']) { const v = String(x[k] || '').toUpperCase(); if (map[v]) x[k] = map[v]; else if (k === 'color' && x.type === 'text' && !x.bg && !from) x.color = p.ink; }
       }
-      draw(); commit(); return showPanel('bg');
+      draw(); commit(); return showPanel(panel === 'colors' ? 'colors' : 'bg');
     }
     if (tg.dataset.bgtype) { const bg = page().bg || {}; page().bg = { ...bg, type: tg.dataset.bgtype, c2: bg.c2 || BRAND.sage, angle: bg.angle ?? 180 }; draw(); commit(); return showPanel('bg'); }
     if (tg.dataset.lay || tg.dataset.spal) {
@@ -398,7 +413,7 @@ export async function render(view, { id }) {
           x.y = Math.round(cy * sy - layerBox(ctx, x).h / 2);
         }
       }
-      proj.format = to; images = await imagesFor(proj.pages); fit(); draw(); commit(); thumbs(); return showPanel('format');
+      proj.format = to; images = await imagesFor(proj.pages); fit(); draw(); commit(); thumbs(); return showPanel(panel === 'fmtquick' ? 'fmtquick' : 'format');
     }
     const a = tg.dataset.a;
     if (a === 'close') { selId = null; cropMode = false; showPanel(null); draw(); }
@@ -440,10 +455,10 @@ export async function render(view, { id }) {
     const ph = proj.spec ? (proj.spec.phrase || phraseById(proj.spec.phraseId)) : null;
     const caption = post?.caption || (ph ? captionFor(ph, { signature: signature() }) : '');
     const multi = proj.pages.length > 1;
-    const s = sheet(`<h3>${t('Exportar e compartilhar')}</h3>
+    const s = sheet(`<h3>${t('Postar')}</h3>
       <p class="xs muted" style="margin:4px 0 14px">${t('A arte é exportada em alta resolução ({w}×{h}), idêntica à prévia, sempre com a logomarca oficial.', { w: F().w, h: F().h })}</p>
       <div class="stack">
-        <button class="btn block" data-x="share">${I.share}${multi ? t('Compartilhar todas as páginas') : t('Compartilhar (Instagram, WhatsApp...)')}</button>
+        <button class="btn block" data-x="share" style="min-height:54px;font-size:17px">${I.share}${t('Postar no Instagram')}</button>
         <div class="grid c2"><button class="btn secondary" data-x="png">PNG${multi ? ' · ' + t('todas') : ''}</button><button class="btn secondary" data-x="jpg">JPG${multi ? ' · ' + t('todas') : ''}</button></div>
         <button class="btn secondary block" data-x="pdf">${I.doc}PDF${multi ? ' (' + t('carrossel') + ')' : ''}</button>
         ${multi ? `<button class="btn ghost block" data-x="cur">${t('Somente a página atual (PNG)')}</button>` : ''}
@@ -456,7 +471,7 @@ export async function render(view, { id }) {
     s.el.addEventListener('click', async (e) => {
       const x = e.target.closest('[data-x]')?.dataset.x; const st = e.target.closest('[data-st]')?.dataset.st;
       try {
-        if (x === 'share') { const files = await render('image/png'); const r = await shareOrDownload(files, { text: caption }); if (r === 'downloaded') toast(t('Arquivos baixados. Compartilhamento direto não disponível neste navegador.')); if (caption && r === 'shared') copyText(caption); }
+        if (x === 'share') { if (caption) navigator.clipboard?.writeText(caption).catch(() => {}); const files = await render('image/png'); const r = await shareOrDownload(files, { text: caption }); if (r === 'downloaded') toast(t('Arquivos baixados. Compartilhamento direto não disponível neste navegador.')); if (caption && r === 'shared') copyText(caption); }
         if (x === 'png' || x === 'jpg') { for (const f of await render(x === 'png' ? 'image/png' : 'image/jpeg')) downloadBlob(f, f.name); toast(t('Download iniciado')); }
         if (x === 'cur') { const b = await exportPage(page(), proj.format); downloadBlob(b, `${base}-${pi + 1}.png`); }
         if (x === 'pdf') { toast(t('Gerando PDF...')); const pages = []; for (const p of proj.pages) { const b = await exportPage(p, proj.format, 'image/jpeg', 0.92); pages.push({ jpeg: new Uint8Array(await b.arrayBuffer()), w: F().w, h: F().h }); } downloadBlob(new Blob([jpegsToPdf(pages, { title: proj.name })], { type: 'application/pdf' }), `${base}.pdf`); }

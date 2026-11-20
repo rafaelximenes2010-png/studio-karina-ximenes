@@ -57,6 +57,17 @@ await step('Navegação inferior (5 abas)', async () => {
   for (const k of ['criar', 'biblioteca', 'agenda', 'perfil', 'inicio']) { await page.click(`.bottomnav a[data-nav=${k}]`); await page.waitForTimeout(350); if ((await page.getAttribute(`.bottomnav a[data-nav=${k}]`, 'aria-current')) !== 'page') throw new Error(k); }
   return 'ok';
 });
+await step('Criar rápido: Story → tema → arte → postar (3 toques)', async () => {
+  await go('#/rapido'); await page.click('[data-fmt=story]'); await page.click('[data-th=logoterapia]');
+  await page.waitForSelector('#g canvas'); await page.waitForTimeout(1500); await shot('03a-rapido-artes');
+  await page.locator('#g [data-i]').first().click(); await page.waitForSelector('#ig:not([disabled])', { timeout: 20000 }); await shot('03b-rapido-postar');
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#ig')]);
+  const f = path.join(OUT, 'rapido-story.png'); await dl.saveAs(f);
+  const [w, h] = pngDims(fs.readFileSync(f)); if (w !== 1080 || h !== 1920) throw new Error(`${w}x${h}`);
+  await closeSheets();
+  await go('#/rapido?f=feed'); await page.fill('#own', 'Recomeçar também é um ato de fé.'); await page.click('#go'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(1200); await shot('03c-rapido-minha-frase');
+  return `Story ${w}×${h} pronto para o Instagram; Feed com frase própria: ${await page.locator('#g [data-i]').count()} opções`;
+});
 await step('Biblioteca de artes prontas', async () => {
   await go('#/biblioteca'); await page.waitForTimeout(1500); await shot('03-biblioteca');
   const c = await page.locator('#count').innerText(); return c;
@@ -81,10 +92,11 @@ await step('Editor: adicionar texto, editar, desfazer/refazer', async () => {
   await page.click('#e-undo'); await page.waitForTimeout(200); await page.click('#e-redo'); await page.waitForTimeout(200);
   return `páginas: ${before}`;
 });
-await step('Editor: fundo, camadas e formato', async () => {
+await step('Editor simples: texto, cores, Story/Feed; avançado em Mais', async () => {
   if (await page.locator('[data-a=close]').count()) await page.click('[data-a=close]');
-  await page.click('[data-tool=bg]'); await page.click('[data-pal=verde]'); await page.waitForTimeout(400); await shot('09-editor-fundo');
-  await page.click('[data-tool=layers]'); await page.waitForTimeout(300);
+  await page.click('[data-tool=colors]'); await page.click('[data-pal=verde]'); await page.waitForTimeout(400); await shot('09-editor-cores');
+  await page.click('[data-tool=fmtquick]'); await page.waitForTimeout(300); await shot('09b-editor-story-feed'); await page.click('[data-tool=fmtquick]');
+  await page.click('#t-more'); await page.click('[data-tool=layers]'); await page.waitForTimeout(300);
   const layers = await page.locator('#props [data-pick]').count();
   await page.click('[data-tool=format]'); await page.click('[data-fmt=square]'); await page.waitForTimeout(600); await shot('10-editor-quadrado');
   return `${layers} camadas`;
