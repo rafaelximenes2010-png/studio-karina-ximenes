@@ -18,7 +18,7 @@ export async function saveImageBlob(blob, meta = {}) {
       const png = blob.type === 'image/png' && blob.size < 4e6;
       out = await new Promise((ok) => c.toBlob(ok, png ? 'image/png' : 'image/jpeg', 0.9));
     }
-    const rec = { id: uid('a'), blob: out, w, h, type: out.type, name: meta.name || 'imagem', source: meta.source || 'device', license: meta.license || '', author: meta.author || '', url: meta.url || '' };
+    const rec = { id: meta.id || uid('a'), blob: out, w, h, type: out.type, name: meta.name || 'imagem', source: meta.source || 'device', license: meta.license || '', author: meta.author || '', url: meta.url || '' };
     await db.put('assets', rec);
     return rec;
   } finally { URL.revokeObjectURL(url); }
@@ -49,15 +49,41 @@ export async function searchCommons(q, limit = 24) {
  * Seletor de imagem profissional (aparelho · minha mídia · banco livre).
  * Resolve com o registro do ativo salvo ou null.
  */
-export function chooseImage({ title = t('Adicionar imagem') } = {}) {
+const STUDIO_PHOTOS = [
+  ['eucalipto', 'Folhas de eucalipto'], ['mar', 'Mar ao amanhecer'], ['caderno', 'Caderno à janela'],
+  ['trilha', 'Trilha na mata'], ['cha', 'Chá da tarde'], ['montanhas', 'Montanhas ao sol'],
+];
+
+export function chooseImage({ title = t('Adicionar imagem'), initialTab = 'dev' } = {}) {
   return new Promise((resolve) => {
     let done = false;
     const finish = (v) => { if (!done) { done = true; resolve(v); s.close(); } };
     const s = sheet(`<div class="row between" style="margin-bottom:10px"><h3>${esc(title)}</h3><button class="icon-btn" data-close aria-label="${t('Fechar')}">${I.close}</button></div>
-      <div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-t="dev">${t('Aparelho')}</button><button role="tab" aria-selected="false" data-t="mine">${t('Minha mídia')}</button><button role="tab" aria-selected="false" data-t="bank">${t('Banco livre')}</button></div>
+      <div class="tabs" role="tablist"><button role="tab" data-t="studio">${t('Coleção Studio')}</button><button role="tab" aria-selected="true" data-t="dev">${t('Aparelho')}</button><button role="tab" aria-selected="false" data-t="mine">${t('Minha mídia')}</button><button role="tab" aria-selected="false" data-t="bank">${t('Banco livre')}</button></div>
       <div id="pane"></div>`, { onClose: () => { if (!done) { done = true; resolve(null); } } });
     const pane = $('#pane', s.el);
     const tabs = {
+      async studio() {
+        pane.innerHTML = `<p class="small muted">${t('Imagens criadas com IA para suas artes.')}</p><div class="grid photo-collection">${STUDIO_PHOTOS.map(([id, label]) =>
+          `<button class="art" data-studio="${id}"><img src="./assets/photos/${id}.jpg" alt=""><span>${t(label)}</span></button>`).join('')}</div>`;
+        pane.onclick = async (e) => {
+          const button = e.target.closest('[data-studio]');
+          if (!button || button.disabled) return;
+          const [id, label] = STUDIO_PHOTOS.find(([key]) => key === button.dataset.studio);
+          button.disabled = true;
+          try {
+            const assetId = 'studio-photo-' + id;
+            let asset = await db.get('assets', assetId);
+            if (!asset) {
+              const r = await fetch('./assets/photos/' + id + '.jpg');
+              if (!r.ok) throw new Error();
+              asset = await saveImageBlob(await r.blob(), { id: assetId, name: t(label), source: 'studio' });
+            }
+            if (button.isConnected) finish(asset);
+          } catch { toast(t('Não foi possível baixar esta imagem.')); }
+          finally { button.disabled = false; }
+        };
+      },
       async dev() {
         pane.innerHTML = `<div class="stack"><button class="btn block" id="pick">${I.image}${t('Escolher da galeria ou câmera')}</button>
           <button class="btn secondary block" id="paste">${I.copy}${t('Colar imagem copiada')}</button>
@@ -73,6 +99,7 @@ export function chooseImage({ title = t('Adicionar imagem') } = {}) {
       },
       async mine() {
         const list = (await db.all('assets'));
+        if (!pane.isConnected || !s.el.querySelector('[data-t=mine]').matches('[aria-selected=true]')) return;
         if (!list.length) { pane.innerHTML = `<div class="empty small">${t('Sua mídia aparecerá aqui depois que você adicionar fotos.')}</div>`; return; }
         pane.innerHTML = `<div class="grid" style="grid-template-columns:repeat(3,1fr)">${list.map((a) => `<button class="art" data-a="${a.id}" style="aspect-ratio:1"><img data-src="${a.id}" alt="${esc(a.name)}" style="width:100%;height:100%;object-fit:cover"></button>`).join('')}</div>`;
         for (const im of $$('img[data-src]', pane)) assetImage(im.dataset.src).then((x) => { if (x) im.src = x.src; });
@@ -100,10 +127,14 @@ export function chooseImage({ title = t('Adicionar imagem') } = {}) {
         pane.querySelector('.chips').onclick = (e) => { const c = e.target.closest('[data-q]'); if (c) { $('#q', pane).value = c.dataset.q; run(c.dataset.q); } };
       },
     };
-    s.el.querySelector('.tabs').onclick = (e) => {
-      const b = e.target.closest('[data-t]'); if (!b) return;
-      $$('.tabs button', s.el).forEach((x) => x.setAttribute('aria-selected', x === b)); tabs[b.dataset.t]();
+    const showTab = (key) => {
+      $$('.tabs button', s.el).forEach((button) => button.setAttribute('aria-selected', button.dataset.t === key));
+      pane.onclick = null;
+      tabs[key]();
     };
-    tabs.dev();
+    s.el.querySelector('.tabs').onclick = (e) => {
+      const b = e.target.closest('[data-t]'); if (b) showTab(b.dataset.t);
+    };
+    showTab(initialTab);
   });
 }

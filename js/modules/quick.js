@@ -29,7 +29,8 @@ const LAY = {
   portrait: ['editorial', 'minimal', 'aspas', 'cartao', 'arco', 'dividido', 'tipografico', 'folhas', 'moldura', 'circulo'],
   square: ['minimal', 'aspas', 'cartao', 'circulo', 'moldura', 'editorial', 'folhas'],
 };
-const PHOTO_LAY = ['foto', 'fotoarco'];
+const PHOTO_LAY = ['foto', 'fotoarco', 'fotofaixa', 'fotocirculo'];
+const STUDIO = ['eucalipto', 'mar', 'caderno', 'trilha', 'cha', 'montanhas'];
 const PALS = Object.keys(PALETTES);
 
 const go = (q) => { location.hash = '#/rapido' + (q ? '?' + new URLSearchParams(q).toString() : ''); };
@@ -91,7 +92,7 @@ async function arts(view, fk, th, txt) {
       : (() => { const all = PHRASES.filter((p) => p.cat === th && (fmt !== 'story' || !p.items)); return Array.from({ length: N }, (_, i) => all[(st.shift * N + i) % all.length]); })();
     return list.filter(Boolean).map((p, i) => ({
       phrase: p.id === 'custom' ? p : undefined, phraseId: p.id === 'custom' ? undefined : p.id,
-      layout: p.items ? (i % 2 ? 'cartaolista' : 'lista') : lays[(st.shift * 3 + i) % lays.length],
+      layout: p.items && st.photo ? 'fotolista' : p.items ? (i % 2 ? 'cartaolista' : 'lista') : lays[(st.shift * 3 + i) % lays.length],
       palette: ks[(st.shift * 5 + i * 3) % ks.length], format: fmt,
     }));
   };
@@ -106,6 +107,7 @@ async function arts(view, fk, th, txt) {
       <button data-ph="" aria-pressed="${!st.photo}">${t('Sem foto')}</button>
       <button data-add aria-label="${t('Do celular')}">${I.plus}</button>
       ${mine.map((a) => `<button data-ph="${a.id}" aria-pressed="${st.photo === a.id}"><img data-asset="${a.id}" alt=""></button>`).join('')}
+      ${STUDIO.map((id) => `<button data-sp="${id}" aria-pressed="${st.photo === 'studio-photo-' + id}"><img loading="lazy" src="./assets/photos/${id}.jpg" alt=""></button>`).join('')}
       <span id="month" style="display:contents"></span>
     </div>`}
     <div class="qgroup">🎨 ${t('Cores')}</div>
@@ -139,6 +141,14 @@ async function arts(view, fk, th, txt) {
     if (e.target.closest('#more')) { st.shift++; sessionStorage.setItem('sk-shift-' + (th || 'txt'), st.shift); paintGrid(); window.scrollTo({ top: grid.offsetTop - 80, behavior: 'smooth' }); return; }
     const col = e.target.closest('[data-col]'); if (col) { st.colors = col.dataset.col; sessionStorage.setItem('sk-colors', st.colors); $$('#cols .chip', view).forEach((x) => x.setAttribute('aria-pressed', x === col)); return paintGrid(); }
     const ph = e.target.closest('[data-ph]'); if (ph) { st.photo = ph.dataset.ph || null; st.photo ? sessionStorage.setItem('sk-photo', st.photo) : sessionStorage.removeItem('sk-photo'); $$('#ph button', view).forEach((x) => x.setAttribute('aria-pressed', x === ph)); return paintGrid(); }
+    const sp = e.target.closest('[data-sp]');
+    if (sp) {
+      const id = 'studio-photo-' + sp.dataset.sp;
+      try {
+        if (!(await db.get('assets', id))) await saveImageBlob(await (await fetch('./assets/photos/' + sp.dataset.sp + '.jpg')).blob(), { id, name: sp.dataset.sp, source: 'studio' });
+        sessionStorage.setItem('sk-photo', id); return arts(view, fk, th, txt);
+      } catch { return toast(t('Não foi possível baixar esta imagem.')); }
+    }
     if (e.target.closest('[data-add]')) { const a = await chooseImage({ title: t('Sua foto') }); if (a) { sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt); } }
   };
 }

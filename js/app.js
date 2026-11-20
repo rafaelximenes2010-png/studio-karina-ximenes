@@ -1,4 +1,5 @@
 // Studio Karina Ximenes — inicialização e roteamento
+import { enablePullBack } from './lib/navigation.js';
 import { t, setLang } from './lib/i18n.js';
 import { prefs, db } from './lib/store.js';
 import { generateMonth, monthsAhead } from './lib/plan.js';
@@ -110,6 +111,7 @@ async function boot() {
   paintChrome(); opening();
   const lock = await import('./modules/lock.js');
   if (lock.isLocked()) await lock.lockScreen();
+  enablePullBack();
   $('#btn-back').onclick = () => (history.length > 1 ? history.back() : (location.hash = '#/'));
   $('#btn-search').onclick = () => import('./modules/home.js').then((m) => m.openSearch());
   await loadCustomPhrases().catch(console.error);
