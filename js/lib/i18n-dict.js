@@ -938,4 +938,8 @@ export const DICT = {
   "Objetivos, conteúdo e atividades": { en: "Goals, content and activities", es: "Objetivos, contenido y actividades" },
   "Para quem é, passo a passo e dicas": { en: "Who it is for, step by step and tips", es: "Para quién es, paso a paso y consejos" },
   "Capa, capítulos e citações": { en: "Cover, chapters and quotes", es: "Portada, capítulos y citas" },
+  "Paisagens reais": { en: "Real landscapes", es: "Paisajes reales" },
+  "Fotos do mês": { en: "Photos of the month", es: "Fotos del mes" },
+  "Toque na foto para usar na arte.": { en: "Tap a photo to use it in the art.", es: "Toca una foto para usarla en el arte." },
+  "Ver maiores": { en: "See larger", es: "Ver más grandes" },
 };

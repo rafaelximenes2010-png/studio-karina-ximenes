@@ -71,20 +71,25 @@ await step('Foto do banco livre numa arte e exportação sem bloqueio (CORS)', a
   if (!r) throw new Error('exportação bloqueada'); return `PNG exportado (${(r / 1024).toFixed(0)} KB)`;
 });
 await step('Fotos do mês: sugestões renovadas e aplicação na arte', async () => {
-  await go('#/rapido?f=story&th=reflexoes'); await page.waitForSelector('#month [data-mp]', { timeout: 30000 }); await shot('06-fotos-do-mes');
-  const n = await page.locator('#month [data-mp]').count();
-  await page.locator('#month [data-mp]').first().click(); await page.waitForFunction(() => !!sessionStorage.getItem('sk-photo'), null, { timeout: 30000 });
+  await go('#/rapido?f=story&th=reflexoes'); await page.waitForSelector('#month [data-pi]', { timeout: 30000 }); await shot('06-fotos-do-mes');
+  const n = await page.locator('#month [data-pi]').count();
+  await page.locator('#month [data-pi]').first().click(); await page.waitForFunction(() => !!sessionStorage.getItem('sk-photo'), null, { timeout: 30000 });
   const cached = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('sk-fotos')));
   return `${n} fotos sugeridas (${cached[0]}); foto aplicada nas artes`;
 });
 await step('Paisagens reais: posts modernos com foto de lugares lindos', async () => {
   await page.evaluate(() => sessionStorage.clear());
-  await go('#/rapido?f=story&th=espiritualidade'); await page.waitForSelector('#land [data-lp]', { timeout: 40000 });
+  await go('#/rapido?f=story&th=espiritualidade'); await page.waitForSelector('#land [data-pi]', { timeout: 40000 });
   await page.waitForTimeout(4000);
   const thumbs = await page.$$eval('#land img', (ims) => ims.map((i) => i.complete && i.naturalWidth > 0));
   const okThumbs = thumbs.filter(Boolean).length; if (!okThumbs) throw new Error('miniaturas não carregaram');
-  const n = await page.locator('#land [data-lp]').count();
-  await page.locator('#land [data-lp]').first().click(); await page.waitForFunction(() => !!sessionStorage.getItem('sk-paisagem'), null, { timeout: 40000 });
+  const titles = await page.$$eval('#land img', (ims) => ims.map((i) => i.alt));
+  const bad = titles.filter((x) => /\b(war|battle|ship|ferry|boat|military|fire|accident|bus|car)\b/i.test(x)); if (bad.length) throw new Error('foto inadequada: ' + bad[0]);
+  await page.click('#land [data-bigall]'); await page.waitForSelector('.big-photos img'); await page.waitForTimeout(2500); await shot('07a-paisagens-grandes'); await page.click('.big-photos [data-bi]');
+  await page.waitForFunction(() => !!sessionStorage.getItem('sk-paisagem'), null, { timeout: 40000 }); await page.evaluate(() => sessionStorage.removeItem('sk-paisagem'));
+  await go('#/rapido?f=story&th=espiritualidade'); await page.waitForSelector('#land [data-pi]', { timeout: 40000 });
+  const n = await page.locator('#land [data-pi]').count();
+  await page.locator('#land [data-pi]').first().click(); await page.waitForFunction(() => !!sessionStorage.getItem('sk-paisagem'), null, { timeout: 40000 });
   await page.waitForSelector('#g canvas'); await page.waitForTimeout(3000); await shot('07-paisagens-modernas');
   return `${n} paisagens sugeridas (${okThumbs} miniaturas visíveis); arte moderna com paisagem aplicada`;
 });

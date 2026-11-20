@@ -145,7 +145,7 @@ async function arts(view, fk, th, txt, tema) {
       <button data-add aria-label="${t('Do celular')}">${I.plus}</button>
       ${mine.map((a) => `<button data-ph="${a.id}" aria-pressed="${st.photo === a.id}"><img data-asset="${a.id}" alt=""></button>`).join('')}
       ${STUDIO.map((id) => `<button data-sp="${id}" aria-pressed="${st.photo === 'studio-photo-' + id}"><img loading="lazy" src="./assets/photos/${id}.jpg" alt=""></button>`).join('')}
-      <span id="month" style="display:contents"></span>
+      <span id="month" class="qphotos-inline"></span>
     </div>`}
     <div class="qgroup">🎨 ${t('Cores')}</div>
     <div class="chips" id="cols">${Object.entries(COLOR_GROUPS).filter(([k]) => k !== 'classicas').map(([k, g]) => {
@@ -154,31 +154,37 @@ async function arts(view, fk, th, txt, tema) {
     <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:8px" id="g"></div>
     <button class="btn block secondary" id="more" style="margin-top:14px">${I.refresh}${t('Ver outras artes')}</button>`;
   for (const im of $$('img[data-asset]', view)) assetImage(im.dataset.asset).then((x) => { if (x) im.src = x.src; });
-  // paisagens reais (renovadas todo mês)
-  if (fk !== 'carousel') landscapePhotos().then((list) => {
-    const m = $('#land', view); if (!m) return;
-    if (!list.length) { m.innerHTML = `<span class="xs muted">${t('Sem internet: as paisagens aparecem quando voltar a conexão.')}</span>`; return; }
-    m.innerHTML = list.map((p, i) => `<button data-lp="${i}" aria-pressed="false" title="${esc(p.title)} · ${esc(p.license)}"><img loading="lazy" src="${esc(p.thumb)}" data-full="${esc(p.full)}" alt="${esc(p.title)}"></button>`).join('');
+  // Aplica uma foto da Wikimedia (paisagem ou foto do mês) na arte
+  const usePhoto = async (p, modern) => {
+    toast(modern ? t('Baixando paisagem...') : t('Baixando imagem...'));
+    try {
+      const a = await saveImageBlob(await (await fetch(p.full)).blob(), { name: p.title, source: 'wikimedia', license: p.license, author: p.author, url: p.page });
+      sessionStorage.setItem('sk-photo', a.id); modern ? sessionStorage.setItem('sk-paisagem', a.id) : sessionStorage.removeItem('sk-paisagem');
+      toast((modern ? t('Paisagem aplicada · {l}', { l: p.license || 'licença livre' }) : t('Foto do mês aplicada · {l}', { l: p.license || 'licença livre' })));
+      arts(view, fk, th, txt, tema);
+    } catch { toast(t('Não foi possível baixar esta imagem.')); }
+  };
+  // Galeria grande para escolher com calma
+  const bigPicker = (list, modern) => {
+    const s = sheet(`<h3 style="margin:0 0 4px">${modern ? t('Paisagens reais') : t('Fotos do mês')}</h3><p class="xs muted" style="margin:0 0 12px">${t('Toque na foto para usar na arte.')}</p>
+      <div class="big-photos">${list.map((p, i) => `<button data-bi="${i}"><img loading="lazy" src="${esc(p.thumb.replace(/\/\d+px-/, '/500px-'))}" data-full="${esc(p.full)}" alt="${esc(p.title)}"><span>${esc(p.title.replace(/\.[a-z]+$/i, '').replace(/[_-]+/g, ' ').slice(0, 48))}</span></button>`).join('')}</div>`, { label: t('Escolher foto') });
+    fixThumbs(s.el);
+    s.el.addEventListener('click', (e) => { const b = e.target.closest('[data-bi]'); if (b) { s.close(); usePhoto(list[+b.dataset.bi], modern); } });
+  };
+  const strip = (sel, list, modern, max) => {
+    const m = $(sel, view); if (!m) return;
+    if (!list.length) { if (modern) m.innerHTML = `<span class="xs muted">${t('Sem internet: as paisagens aparecem quando voltar a conexão.')}</span>`; return; }
+    m.innerHTML = list.slice(0, max).map((p, i) => `<button data-pi="${i}" title="${esc(p.title)} · ${esc(p.license)}"><img loading="lazy" src="${esc(p.thumb)}" data-full="${esc(p.full)}" alt="${esc(p.title)}"></button>`).join('')
+      + `<button data-bigall class="see-all">${I.grid}<span>${t('Ver maiores')}</span></button>`;
     fixThumbs(m);
-    m.onclick = async (e) => {
-      const b = e.target.closest('[data-lp]'); if (!b) return; e.stopPropagation(); const p = list[+b.dataset.lp];
-      toast(t('Baixando paisagem...'));
-      try { const a = await saveImageBlob(await (await fetch(p.full)).blob(), { name: p.title, source: 'wikimedia', license: p.license, author: p.author, url: p.page }); sessionStorage.setItem('sk-photo', a.id); sessionStorage.setItem('sk-paisagem', a.id); toast(t('Paisagem aplicada · {l}', { l: p.license || 'licença livre' })); arts(view, fk, th, txt, tema); }
-      catch { toast(t('Não foi possível baixar esta imagem.')); }
+    m.onclick = (e) => {
+      e.stopPropagation();
+      if (e.target.closest('[data-bigall]')) return bigPicker(list, modern);
+      const b = e.target.closest('[data-pi]'); if (b) usePhoto(list[+b.dataset.pi], modern);
     };
-  }).catch(() => {});
-  // fotos do mês (sugestões renovadas mensalmente)
-  if (fk !== 'carousel') monthPhotos().then((list) => {
-    const m = $('#month', view); if (!m || !list.length) return;
-    m.innerHTML = list.slice(0, 10).map((p, i) => `<button data-mp="${i}" title="${esc(p.license)} · ${esc(p.author)}"><img loading="lazy" src="${esc(p.thumb)}" data-full="${esc(p.full)}" alt="${esc(p.title)}"></button>`).join('');
-    fixThumbs(m);
-    m.onclick = async (e) => {
-      const b = e.target.closest('[data-mp]'); if (!b) return; e.stopPropagation(); const p = list[+b.dataset.mp];
-      toast(t('Baixando imagem...'));
-      try { const a = await saveImageBlob(await (await fetch(p.full)).blob(), { name: p.title, source: 'wikimedia', license: p.license, author: p.author, url: p.page }); sessionStorage.setItem('sk-photo', a.id); toast(t('Foto do mês aplicada · {l}', { l: p.license || 'licença livre' })); arts(view, fk, th, txt, tema); }
-      catch { toast(t('Não foi possível baixar esta imagem.')); }
-    };
-  }).catch(() => {});
+  };
+  if (fk !== 'carousel') landscapePhotos().then((list) => strip('#land', list, true, 16)).catch(() => {});
+  if (fk !== 'carousel') monthPhotos().then((list) => strip('#month', list, false, 10)).catch(() => {});
   const grid = $('#g', view);
   const paintGrid = () => {
     const list = specs();

@@ -16,14 +16,14 @@ export const MONTH_THEMES = {
   11: ['blue sky clouds', 'blue sea waves', 'blue hydrangea'], // Novembro Azul
   12: ['starry night sky', 'warm christmas lights', 'pine forest snow'],
 };
-const key = (d = new Date()) => `sk-fotos2-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+const key = (d = new Date()) => `sk-fotos3-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
 /** Lista do mês: [{title, thumb, full, page, license, author}] */
 export async function monthPhotos() {
   const k = key();
   try { const c = JSON.parse(localStorage.getItem(k) || 'null'); if (c?.length) return c; } catch { /* sem cache */ }
   const themes = MONTH_THEMES[new Date().getMonth() + 1];
-  const res = await Promise.allSettled(themes.map((q) => searchCommons(q, 10)));
+  const res = await Promise.allSettled(themes.map((q) => searchCommons(q, 14, { curated: true })));
   const list = res.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
     .filter((p) => p.license && !/non-?free|fair use/i.test(p.license))
     .map((p) => ({ ...p, full: p.thumb, thumb: p.thumb.replace(/\/\d+px-/, '/330px-') }));
@@ -39,16 +39,16 @@ export async function monthPhotos() {
 
 // Paisagens reais de lugares lindos (Wikimedia Commons, licença livre), renovadas todo mês
 const PLACES = [
-  'Lençóis Maranhenses', 'Fernando de Noronha', 'Chapada Diamantina', 'Serra da Mantiqueira', 'Jericoacoara', 'Bonito Mato Grosso do Sul river',
+  'Lençóis Maranhenses', 'Fernando de Noronha beach', 'Chapada Diamantina', 'Serra da Mantiqueira', 'Jericoacoara', 'Bonito Mato Grosso do Sul',
   'Dolomites landscape', 'Swiss Alps lake', 'Patagonia mountains', 'Norway fjord', 'Iguazu Falls', 'Santorini', 'Tuscany hills', 'Lake Bled',
   'Banff lake', 'Scottish Highlands', 'Cappadocia balloons', 'Sahara dunes', 'Maldives beach', 'Plitvice lakes', 'Halong Bay', 'Mount Fuji',
 ];
 export async function landscapePhotos() {
-  const d = new Date(); const k = `sk-paisagens2-${d.getFullYear()}-${d.getMonth() + 1}`;
+  const d = new Date(); const k = `sk-paisagens3-${d.getFullYear()}-${d.getMonth() + 1}`;
   try { const c = JSON.parse(localStorage.getItem(k) || 'null'); if (c?.length) return c; } catch { /* sem cache */ }
   const start = (d.getMonth() * 5) % PLACES.length;
   const picks = Array.from({ length: 6 }, (_, i) => PLACES[(start + i) % PLACES.length]);
-  const res = await Promise.allSettled(picks.map((q) => searchCommons(q, 6)));
+  const res = await Promise.allSettled(picks.map((q) => searchCommons(q, 10, { curated: true })));
   const list = res.flatMap((r) => (r.status === 'fulfilled' ? r.value.slice(0, 3) : []))
     .filter((p) => p.license && !/non-?free|fair use/i.test(p.license) && (!p.w || !p.h || p.w >= p.h * 0.9))
     .map((p) => ({ ...p, full: p.thumb, thumb: p.thumb.replace(/\/\d+px-/, '/330px-') }));

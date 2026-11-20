@@ -33,16 +33,28 @@ export function pickFiles({ multiple = false } = {}) {
 }
 
 /** Busca no Wikimedia Commons (imagens com licença livre; atribuição registrada) */
-export async function searchCommons(q, limit = 24) {
-  const u = 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=' + encodeURIComponent(q + ' filetype:bitmap') +
-    `&gsrnamespace=6&gsrlimit=${limit}&prop=imageinfo&iiprop=url%7Cextmetadata%7Csize&iiurlwidth=1600&format=json&origin=*`;
-  const r = await fetch(u); if (!r.ok) throw new Error('HTTP ' + r.status);
-  const j = await r.json();
-  const strip = (s) => String(s || '').replace(/<[^>]+>/g, '').trim();
-  return Object.values(j.query?.pages || {}).filter((p) => p.imageinfo?.[0]?.thumburl).map((p) => {
-    const ii = p.imageinfo[0]; const md = ii.extmetadata || {};
-    return { title: p.title.replace(/^File:/, ''), thumb: ii.thumburl, page: ii.descriptionurl, license: strip(md.LicenseShortName?.value), author: strip(md.Artist?.value).slice(0, 80) };
-  });
+// Palavras que nunca combinam com posts de cuidado emocional (guerra, desastres, anúncios, veículos...)
+export const BLOCKED = /\b(war|wars|guerra|battle|batalha|military|militar|army|exército|soldiers?|weapons?|arma|armas|bomb\w*|explos\w*|fire|fires|incêndio|burning|ships?|navio|ferry|ferries|boats?|barco|catamaran|warship|tanks?|aircraft|airplane|avião|trains?|trem|bus|ônibus|cars?|carro|trucks?|accident\w*|acidente|disaster\w*|desastre|flood\w*|enchente|ruins?|death|morte|dead|graves?|cemetery|cemitério|funeral|protest\w*|protesto|riots?|police|polícia|prison|blood|sangue|hunting|caça|advert\w*|logo|poster|maps?|mapa|diagram|chart|flags?|bandeira|nude|naked|crowd|multidão|selfie)\b/i;
+
+/** Busca no Wikimedia Commons. curated: só fotos premiadas/de qualidade, sem temas pesados. */
+export async function searchCommons(q, limit = 24, { curated = false } = {}) {
+  const run = async (query) => {
+    const u = 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=' + encodeURIComponent(query) +
+      `&gsrnamespace=6&gsrlimit=${limit}&prop=imageinfo&iiprop=url%7Cextmetadata%7Csize&iiurlwidth=1600&format=json&origin=*`;
+    const r = await fetch(u); if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    const strip = (s) => String(s || '').replace(/<[^>]+>/g, '').trim();
+    return Object.values(j.query?.pages || {}).filter((p) => p.imageinfo?.[0]?.thumburl).map((p) => {
+      const ii = p.imageinfo[0]; const md = ii.extmetadata || {};
+      return { title: p.title.replace(/^File:/, ''), thumb: ii.thumburl, page: ii.descriptionurl, license: strip(md.LicenseShortName?.value), author: strip(md.Artist?.value).slice(0, 80),
+        w: ii.width, h: ii.height, cats: strip(md.Categories?.value), desc: strip(md.ImageDescription?.value).slice(0, 300) };
+    });
+  };
+  if (!curated) return run(q + ' filetype:bitmap');
+  const clean = (list) => list.filter((p) => !BLOCKED.test(`${p.title} ${p.cats} ${p.desc}`));
+  let list = clean(await run(`${q} filetype:bitmap incategory:"Featured_pictures_on_Wikimedia_Commons|Quality_images"`));
+  if (list.length < 3) list = [...list, ...clean(await run(q + ' filetype:bitmap'))];
+  return list;
 }
 
 /**
