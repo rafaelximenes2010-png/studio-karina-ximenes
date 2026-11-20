@@ -1,0 +1,150 @@
+{
+  "base": "http://127.0.0.1:8080/",
+  "date": "2026-11-20T15:49:37.358Z",
+  "results": [
+    {
+      "name": "Abertura com logomarca e tela inicial",
+      "ok": true,
+      "ms": 3885,
+      "info": "Boa tarde, Karina."
+    },
+    {
+      "name": "Ícones e manifesto publicados",
+      "ok": true,
+      "ms": 39,
+      "info": "apple-touch 180x180; manifest 192x192, 512x512, 192x192, 512x512"
+    },
+    {
+      "name": "Programação automática criou publicações",
+      "ok": true,
+      "ms": 1510,
+      "info": "39 publicações programadas"
+    },
+    {
+      "name": "Navegação inferior (5 abas)",
+      "ok": true,
+      "ms": 1976,
+      "info": "ok"
+    },
+    {
+      "name": "Biblioteca de artes prontas",
+      "ok": true,
+      "ms": 2067,
+      "info": "465 artes"
+    },
+    {
+      "name": "Filtro por tema (Fé cristã)",
+      "ok": true,
+      "ms": 1391,
+      "info": "69 artes"
+    },
+    {
+      "name": "Prévia com variações e abrir no editor",
+      "ok": true,
+      "ms": 3868,
+      "info": "/editor/pmwp5me9sy5a8"
+    },
+    {
+      "name": "Editor: adicionar texto, editar, desfazer/refazer",
+      "ok": true,
+      "ms": 961,
+      "info": "páginas: 1"
+    },
+    {
+      "name": "Editor: fundo, camadas e formato",
+      "ok": true,
+      "ms": 1691,
+      "info": "6 camadas"
+    },
+    {
+      "name": "Editor: arrastar camada (toque/mouse)",
+      "ok": true,
+      "ms": 106,
+      "info": "ok"
+    },
+    {
+      "name": "Exportar PNG em alta resolução",
+      "ok": true,
+      "ms": 462,
+      "info": "1080×1080, 145 KB"
+    },
+    {
+      "name": "Exportar PDF",
+      "ok": true,
+      "ms": 225,
+      "info": "72 KB"
+    },
+    {
+      "name": "Persistência: recarregar e reabrir projeto",
+      "ok": true,
+      "ms": 4628,
+      "info": "formato quadrado e edições mantidos"
+    },
+    {
+      "name": "Exportação idêntica à prévia (comparação de pixels)",
+      "ok": true,
+      "ms": 1044,
+      "info": "export 1080×1350; diferença média prévia×exportação 2.11/255"
+    },
+    {
+      "name": "Agenda: mês, lista e semana temática",
+      "ok": true,
+      "ms": 5847,
+      "info": "Programar 5 publicações"
+    },
+    {
+      "name": "Frankie: modo assistido e minhas reflexões",
+      "ok": true,
+      "ms": 1475,
+      "info": "títulos gerados; reflexão salva e programada"
+    },
+    {
+      "name": "Documento: artigo → Word (.docx) válido",
+      "ok": true,
+      "ms": 1895,
+      "info": "7 partes no .docx"
+    },
+    {
+      "name": "Ciência: tela e cadastro manual de referência",
+      "ok": true,
+      "ms": 2163,
+      "info": "FRANKL, Viktor E.\nMan's search for meaning\n. Beacon Press, 1959.\nsem fichamento"
+    },
+    {
+      "name": "Perfil: identidade, privacidade e diagnóstico",
+      "ok": true,
+      "ms": 3105,
+      "info": "✅ Logomarca original carregada | 487×452 | ✅ Ícone icon-180.png | 180×180 | ✅ Ícone icon-192.png | 192×192 | ✅ Ícone icon-512.png | 512×512 | ✅ Ícone icon-maskable-512.png | 512×512 | ✅ Manifesto PWA | Studio Karina Ximenes | Psicóloga | ✅ Fontes da marca | ✅ Banco de dados local | ✅ Modo offline (service worker) | ✅ Conexão segura (HTTPS)"
+    },
+    {
+      "name": "Idioma inglês e tema escuro",
+      "ok": true,
+      "ms": 3459,
+      "info": "Home Create Library Calendar Profile"
+    },
+    {
+      "name": "Acesso por PIN",
+      "ok": true,
+      "ms": 1259,
+      "info": "PIN errado: \"PIN incorreto\"; PIN certo: desbloqueado"
+    },
+    {
+      "name": "Offline: service worker serve o app sem rede",
+      "ok": true,
+      "ms": 1972,
+      "info": "app abriu offline"
+    },
+    {
+      "name": "Tutorial de primeiro acesso",
+      "ok": true,
+      "ms": 3289,
+      "info": "Bem-vinda ao seu Studio"
+    },
+    {
+      "name": "Sem erros de JavaScript",
+      "ok": true,
+      "ms": 0,
+      "info": "0 erros"
+    }
+  ]
+}
