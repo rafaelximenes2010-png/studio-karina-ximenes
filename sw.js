@@ -1,6 +1,7 @@
-// Service worker — offline e cache versionado. Atualize VERSION a cada publicação.
-const VERSION = '2.1.0';
-const CACHE = 'studio-karina-' + VERSION;
+// Service worker — offline e cache versionado. BUILD é gerado pelo conteúdo (scripts/gen_sw.py): cada publicação troca o cache inteiro.
+const VERSION = '2.1.1';
+const BUILD = '02bc273ab0';
+const CACHE = 'studio-karina-' + VERSION + '-' + BUILD;
 const CORE = [
  "./",
  "./assets/brand/favicon-32.png",
@@ -83,9 +84,9 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(fetch(req).then((r) => { const c = r.clone(); caches.open(CACHE).then((x) => x.put('./index.html', c)); return r; }).catch(() => caches.match('./index.html')));
     return;
   }
-  // Demais arquivos do app: cache primeiro, atualizando em segundo plano
-  e.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => {
-    const net = fetch(req).then((r) => { if (r.ok) { const c = r.clone(); caches.open(CACHE).then((x) => x.put(req, c)); } return r; }).catch(() => hit);
-    return hit || net;
-  }));
+  // Demais arquivos: cache da versão atual (nunca mistura versões); o que não estiver no cache vem da rede
+  e.respondWith(caches.open(CACHE).then((c) => c.match(req, { ignoreSearch: true })).then((hit) => hit || fetch(req).then((r) => {
+    if (r.ok && CORE.includes(url.pathname.replace(new URL(self.registration.scope).pathname, './'))) { const c = r.clone(); caches.open(CACHE).then((x) => x.put(req, c)); }
+    return r;
+  })));
 });
