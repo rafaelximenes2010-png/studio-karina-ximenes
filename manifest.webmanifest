@@ -1,0 +1,10 @@
+{
+  "name": "Studio Karina Ximenes | Psicóloga",
+  "short_name": "Studio Karina",
+  "description": "Studio de conteúdo da clínica Karina Ximenes",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f2ea",
+  "theme_color": "#435b49"
+}
