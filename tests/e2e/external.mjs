@@ -74,16 +74,19 @@ await step('Fotos do mês: sugestões renovadas e aplicação na arte', async ()
   await go('#/rapido?f=story&th=reflexoes'); await page.waitForSelector('#month [data-mp]', { timeout: 30000 }); await shot('06-fotos-do-mes');
   const n = await page.locator('#month [data-mp]').count();
   await page.locator('#month [data-mp]').first().click(); await page.waitForFunction(() => !!sessionStorage.getItem('sk-photo'), null, { timeout: 30000 });
-  const cached = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('sk-fotos-')));
+  const cached = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('sk-fotos')));
   return `${n} fotos sugeridas (${cached[0]}); foto aplicada nas artes`;
 });
 await step('Paisagens reais: posts modernos com foto de lugares lindos', async () => {
   await page.evaluate(() => sessionStorage.clear());
   await go('#/rapido?f=story&th=espiritualidade'); await page.waitForSelector('#land [data-lp]', { timeout: 40000 });
+  await page.waitForTimeout(4000);
+  const thumbs = await page.$$eval('#land img', (ims) => ims.map((i) => i.complete && i.naturalWidth > 0));
+  const okThumbs = thumbs.filter(Boolean).length; if (!okThumbs) throw new Error('miniaturas não carregaram');
   const n = await page.locator('#land [data-lp]').count();
   await page.locator('#land [data-lp]').first().click(); await page.waitForFunction(() => !!sessionStorage.getItem('sk-paisagem'), null, { timeout: 40000 });
   await page.waitForSelector('#g canvas'); await page.waitForTimeout(3000); await shot('07-paisagens-modernas');
-  return `${n} paisagens sugeridas; arte moderna com paisagem aplicada`;
+  return `${n} paisagens sugeridas (${okThumbs} miniaturas visíveis); arte moderna com paisagem aplicada`;
 });
 await step('Sem erros de JavaScript', async () => { if (errors.length) throw new Error(errors[0]); return '0 erros'; });
 await browser.close();
