@@ -30,7 +30,7 @@ export async function render(view, params) {
   view.onclick = async (e) => {
     const b = e.target.closest('[data-kind]'); if (!b) return;
     const k = KINDS[b.dataset.kind];
-    const doc = { id: uid('d'), kind: b.dataset.kind, title: t(k.label), subtitle: '', author: 'Karina Ximenes — Psicóloga', date: new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }), cover: true, footer: 'Karina Ximenes | Psicóloga', style: prefs.get().refStyle || 'abnt', refIds: [], blocks: k.outline.map(([type, text]) => ({ id: uid('b'), type, text: t(text) })) };
+    const doc = { id: uid('d'), kind: b.dataset.kind, title: t(k.label), subtitle: '', author: (() => { const p = prefs.get(); return `${p.fullName || 'Karina Ximenes'} — Psicóloga${p.crp ? ' · CRP ' + p.crp : ''}`; })(), date: new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }), cover: true, footer: 'Karina Ximenes | Psicóloga', style: prefs.get().refStyle || 'abnt', refIds: [], blocks: k.outline.map(([type, text]) => ({ id: uid('b'), type, text: t(text) })) };
     await db.put('docs', doc); location.hash = `#/documento/${doc.id}`;
   };
 }
