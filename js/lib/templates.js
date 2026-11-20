@@ -23,7 +23,7 @@ export const PALETTES = {
 
 export const LAYOUTS = {
   minimal: 'Minimalista', editorial: 'Editorial', aspas: 'Citação', moldura: 'Moldura', dividido: 'Dividido',
-  arco: 'Arco', foto: 'Fotográfico', fotoarco: 'Foto em arco', tipografico: 'Tipográfico', cartao: 'Cartão',
+  arco: 'Arco', foto: 'Fotográfico', fotoarco: 'Foto em arco', fotocirculo: 'Retrato circular', fotofaixa: 'Foto panorâmica', fotolista: 'Lista com foto', tipografico: 'Tipográfico', cartao: 'Cartão',
   circulo: 'Círculo', folhas: 'Botânico', campanha: 'Campanha', institucional: 'Institucional', lista: 'Lista', cartaolista: 'Lista em cartão',
 };
 const TEXT_LAYOUTS = ['minimal', 'editorial', 'aspas', 'moldura', 'dividido', 'arco', 'foto', 'fotoarco', 'tipografico', 'cartao', 'circulo', 'folhas', 'campanha', 'institucional'];
@@ -164,6 +164,25 @@ const L = {
     ls.push(t);
     return [...ls, ...ft];
   },
+  fotocirculo(p, pal, F, o) {
+    const layers = L.fotoarco(p, pal, F, o);
+    const photo = layers[0];
+    photo.w = photo.h = Math.min(photo.w, photo.h);
+    photo.x = (F.W - photo.w) / 2;
+    photo.mask = 'circle';
+    return layers;
+  },
+  fotofaixa(p, pal, F, o) {
+    const height = Math.round(F.H * 0.42);
+    const foot = footer(F, pal, o.sig, 'left');
+    const text = T(p.text, F.m, 0, F.W - 2 * F.m, 72, { align: 'left', color: pal.ink });
+    fit(text, height + 50, foot[0].y - height - 110, o.mctx);
+    return [IMG(0, 0, F.W, height), S('rect', F.m, height + 20, 110, 6, { fill: pal.accent }), text, ...foot];
+  },
+  fotolista(p, pal, F, o) {
+    const photoHeight = Math.round(F.H * 0.2);
+    return [IMG(0, 0, F.W, photoHeight), ...L.lista(p, pal, { ...F, top: photoHeight + 36 }, o)];
+  },
   tipografico(p, pal, F, o) {
     const words = p.text.split(' ');
     const head = words.slice(0, 2).join(' ').replace(/[,.:;]$/, '');
@@ -278,7 +297,7 @@ export function buildPages(spec, o = {}) {
   const F = frame(fmt);
   const opts = { sig: o.sig || 'Karina Ximenes | Psicóloga', mctx: o.mctx };
   let layout = spec.layout;
-  if (!L[layout] || (p.items && !LIST_LAYOUTS.includes(layout) && layout !== 'carrossel')) layout = p.items ? 'lista' : 'minimal';
+  if (!L[layout] || (p.items && !LIST_LAYOUTS.includes(layout) && layout !== 'fotolista' && layout !== 'carrossel')) layout = p.items ? 'lista' : 'minimal';
   const page = (layers) => ({ bg: { ...pal.bg }, layers: layers.map((l, i) => ({ ...l, tpl: i })), stampRing: pal.ring });
   if (spec.layout === 'carrossel' && p.items) {
     // Carrossel: capa + 1 página por item + encerramento

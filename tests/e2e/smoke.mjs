@@ -69,6 +69,46 @@ await step('Criar rápido: Story → tema → arte → postar (3 toques)', async
   await go('#/rapido?f=feed'); await page.fill('#own', 'Recomeçar também é um ato de fé.'); await page.click('#go'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(1200); await shot('03c-rapido-minha-frase');
   return `Story ${w}×${h} pronto para o Instagram; Feed com frase própria: ${await page.locator('#g [data-i]').count()} opções`;
 });
+await step('Feed com foto do Studio, frase escolhida e navegação por toque', async () => {
+  await go('#/rapido?f=feed');
+  await page.fill('#own', 'Uma pausa para refletir.');
+  await page.click('[data-th=logoterapia]');
+  const phrase = await page.locator('#phrase option').nth(1).getAttribute('value');
+  await page.selectOption('#phrase', phrase);
+  await page.click('#photo');
+  if (await page.locator('[data-studio]').count() !== 6) throw new Error('Coleção incompleta');
+  await page.click('[data-studio=mar]');
+  await page.waitForSelector('#nophoto');
+  await page.locator('#g .art').nth(2).click();
+  await page.waitForSelector('#ig:not([disabled])');
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#dl')]);
+  const file = path.join(OUT, 'feed-com-foto.png'); await dl.saveAs(file);
+  if (pngDims(fs.readFileSync(file)).join('x') !== '1080x1350') throw new Error('Formato do Feed');
+  await page.click('#edit'); await page.waitForSelector('#cv');
+  const check = await page.evaluate(async () => {
+    const { db } = await import('./js/lib/store.js');
+    const p = await db.get('projects', location.hash.split('/').pop());
+    return { phrase: p.spec.phraseId, photo: p.pages[0].layers.find((l) => l.type === 'image')?.assetId };
+  });
+  if (check.photo !== 'studio-photo-mar' || check.phrase !== phrase) throw new Error('Foto ou frase não chegou ao editor');
+  await page.click('#e-back'); await page.waitForSelector('#nophoto');
+  if (await page.inputValue('#phrase') !== phrase) throw new Error('Seleção perdida ao voltar');
+  await page.click('#photo');
+  async function pull(selector, dy) {
+    await page.locator(selector).first().evaluate((el, distance) => {
+      const touch = (y) => new Touch({ identifier: 1, target: el, clientX: 44, clientY: y });
+      for (const [type, y] of [['touchstart', 80], ['touchmove', 80 + distance], ['touchend', 80 + distance]]) {
+        el.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === 'touchend' ? [] : [touch(y)], changedTouches: [touch(y)] }));
+      }
+    }, dy);
+  }
+  await pull('.sheet .grab', 30);
+  if (!await page.locator('.sheet').isVisible()) throw new Error('Gesto curto fechou o painel');
+  await pull('.sheet .grab', 110); await page.waitForSelector('.sheet', { state: 'detached' });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await pull('#view h1', 110); await page.waitForSelector('#own');
+  if (await page.inputValue('#own') !== 'Uma pausa para refletir.') throw new Error('Rascunho perdido');
+});
 await step('Biblioteca de artes prontas', async () => {
   await go('#/biblioteca'); await page.waitForTimeout(1500); await shot('03-biblioteca');
   const c = await page.locator('#count').innerText(); return c;

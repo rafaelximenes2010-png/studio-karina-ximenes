@@ -90,7 +90,7 @@ async function brand(view) {
     <h2 class="h-section">${t('Tipografia')}</h2>
     <div class="card"><p style="font-family:var(--serif);font-size:32px;margin:0">Cormorant Garamond</p><p class="small muted">${t('Títulos e frases — elegância editorial')}</p><p style="font-family:var(--sans);font-size:22px;margin:10px 0 0">Inter</p><p class="small muted">${t('Textos de apoio e interface — legibilidade')}</p></div>
     <h2 class="h-section">${t('Ícones do aplicativo')}</h2>
-    <div class="card row" style="justify-content:space-around">${[['icon-180.png', 'iPhone 180'], ['icon-192.png', 'Android 192'], ['icon-maskable-512.png', 'Maskable 512'], ['favicon-48.png', 'Favicon']].map(([f, l]) => `<div style="text-align:center"><img src="./assets/brand/${f}?v=2.0.4" alt="${l}" style="width:64px;height:64px;border-radius:14px;box-shadow:var(--shadow-1)"><div class="xs muted">${l}</div></div>`).join('')}</div>
+    <div class="card row" style="justify-content:space-around">${[['icon-180.png', 'iPhone 180'], ['icon-192.png', 'Android 192'], ['icon-maskable-512.png', 'Maskable 512'], ['favicon-48.png', 'Favicon']].map(([f, l]) => `<div style="text-align:center"><img src="./assets/brand/${f}?v=2.1.0" alt="${l}" style="width:64px;height:64px;border-radius:14px;box-shadow:var(--shadow-1)"><div class="xs muted">${l}</div></div>`).join('')}</div>
     <h2 class="h-section">${t('Paletas para artes')}</h2>
     <div class="chips">${Object.values(PALETTES).map((p) => `<span class="chip"><i style="width:14px;height:14px;border-radius:50%;background:${p.bg.type === 'solid' ? p.bg.c1 : `linear-gradient(${p.bg.c1},${p.bg.c2})`};border:1px solid #0002"></i>${t(p.name)}</span>`).join('')}</div>`;
   $('.palette', view).onclick = (e) => { const b = e.target.closest('[data-hex]'); if (b) copyText(b.dataset.hex); };
@@ -166,8 +166,8 @@ async function admin(view) {
   const checks = [];
   const ck = async (name, fn) => { try { const r = await fn(); checks.push([name, !!r, typeof r === 'string' ? r : '']); } catch (e) { checks.push([name, false, e.message]); } };
   await ck(t('Logomarca original carregada'), async () => { const im = await getLogo(); return im.naturalWidth >= 400 && `${im.naturalWidth}×${im.naturalHeight}`; });
-  for (const [f, sz] of [['icon-180.png', 180], ['icon-192.png', 192], ['icon-512.png', 512], ['icon-maskable-512.png', 512]]) await ck(`${t('Ícone')} ${f}`, () => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im.naturalWidth === sz && `${sz}×${sz}`); im.onerror = () => ok(false); im.src = `./assets/brand/${f}?v=2.0.4`; }));
-  await ck(t('Manifesto PWA'), async () => { const m = await (await fetch('./manifest.webmanifest?v=2.0.4')).json(); return m.icons.length >= 4 && m.name; });
+  for (const [f, sz] of [['icon-180.png', 180], ['icon-192.png', 192], ['icon-512.png', 512], ['icon-maskable-512.png', 512]]) await ck(`${t('Ícone')} ${f}`, () => new Promise((ok) => { const im = new Image(); im.onload = () => ok(im.naturalWidth === sz && `${sz}×${sz}`); im.onerror = () => ok(false); im.src = `./assets/brand/${f}?v=2.1.0`; }));
+  await ck(t('Manifesto PWA'), async () => { const m = await (await fetch('./manifest.webmanifest?v=2.1.0')).json(); return m.icons.length >= 4 && m.name; });
   await ck(t('Fontes da marca'), async () => { await document.fonts.ready; return document.fonts.check('600 20px "Cormorant Garamond"') && document.fonts.check('400 16px Inter'); });
   await ck(t('Banco de dados local'), async () => { await db.put('texts', { id: '__diag', title: 'diag', text: '' }); await db.del('texts', '__diag'); return true; });
   await ck(t('Modo offline (service worker)'), async () => !!navigator.serviceWorker?.controller || (location.protocol === 'https:' ? '' : 'http local'));

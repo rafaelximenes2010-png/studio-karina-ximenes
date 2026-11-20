@@ -4,7 +4,9 @@ import { prefs, db } from './lib/store.js';
 import { generateMonth, monthsAhead } from './lib/plan.js';
 import { I, $, $$, toast } from './ui.js';
 
-export const VERSION = '2.0.4';
+import { back, markEntry, enablePullBack } from './lib/navigation.js';
+
+export const VERSION = '2.1.0';
 
 const ROUTES = {
   '': () => import('./modules/home.js'),
@@ -20,7 +22,7 @@ const ROUTES = {
   perfil: () => import('./modules/profile.js'),
 };
 const NAV_OF = { '': 'inicio', rapido: 'criar', criar: 'criar', editor: 'criar', textos: 'criar', documentos: 'criar', documento: 'criar', biblioteca: 'biblioteca', ciencia: 'biblioteca', agenda: 'agenda', perfil: 'perfil' };
-const TOP_LEVEL = new Set(['', 'rapido', 'criar', 'biblioteca', 'agenda', 'perfil']);
+
 
 export function applyTheme(theme = prefs.get().theme) {
   const dark = theme === 'dark' || (theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
@@ -38,7 +40,8 @@ export function paintChrome() {
 }
 
 let cleanup = null; let renderToken = 0;
-async function route() {
+async function route(event) {
+  markEntry(event);
   const token = ++renderToken;
   const hash = location.hash.replace(/^#\/?/, '');
   const [path, query = ''] = hash.split('?');
@@ -47,7 +50,7 @@ async function route() {
   const params = { id: rest.join('/') || null, query: new URLSearchParams(query), name: key };
   try { cleanup?.(); } catch { /* noop */ }
   cleanup = null;
-  document.body.classList.toggle('sub', !TOP_LEVEL.has(key) || params.id !== null);
+  document.body.classList.toggle('sub', Boolean(key));
   document.body.classList.remove('editor-mode');
   document.body.classList.toggle('on-frank', key === 'textos' || key === 'rapido');
   $$('.bottomnav a').forEach((a) => (a.dataset.nav === NAV_OF[key] ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
@@ -110,7 +113,12 @@ async function boot() {
   paintChrome(); opening();
   const lock = await import('./modules/lock.js');
   if (lock.isLocked()) await lock.lockScreen();
-  $('#btn-back').onclick = () => (history.length > 1 ? history.back() : (location.hash = '#/'));
+  $('#btn-back').onclick = () => {
+    const q = new URLSearchParams(location.hash.split('?')[1]);
+    const fallback = location.hash.startsWith('#/rapido?') ? (q.has('tema') ? '#/rapido?f=' + (q.get('f') === 'feed' ? 'feed' : 'story') : '#/rapido') : '#/';
+    back(fallback);
+  };
+  enablePullBack();
   $('#btn-search').onclick = () => import('./modules/home.js').then((m) => m.openSearch());
   await loadCustomPhrases().catch(console.error);
   window.addEventListener('hashchange', route);

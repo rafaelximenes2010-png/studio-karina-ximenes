@@ -61,9 +61,9 @@ export function toast(msg, ms = 2600) {
 /** Abre uma folha (bottom sheet). Retorna {el, close} */
 export function sheet(inner, { onClose, label = '' } = {}) {
   const prev = document.activeElement;
-  const bd = h(`<div class="sheet-backdrop" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="sheet"><div class="grab"></div>${inner}</div></div>`);
-  const close = () => { bd.remove(); document.removeEventListener('keydown', onKey); onClose?.(); prev?.focus?.(); };
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const bd = h(`<div class="sheet-backdrop" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="sheet"><div class="sheet-nav"><div class="grab"></div><button type="button" class="btn ghost sm" data-sheet-back data-close>${I.back}${t('Voltar')}</button></div>${inner}</div></div>`);
+  const close = () => { if (!bd.isConnected) return; bd.remove(); document.removeEventListener('keydown', onKey); onClose?.(); prev?.focus?.({ preventScroll: true }); };
+  const onKey = (e) => { if (e.key === 'Escape' && [...document.querySelectorAll('.sheet-backdrop')].at(-1) === bd) close(); };
   bd.addEventListener('click', (e) => { if (e.target === bd) close(); });
   document.addEventListener('keydown', onKey);
   bd.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) close(); });

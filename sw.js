@@ -1,5 +1,5 @@
 // Service worker — offline e cache versionado. Atualize VERSION a cada publicação.
-const VERSION = '2.0.4';
+const VERSION = '2.1.0';
 const CACHE = 'studio-karina-' + VERSION;
 const CORE = [
  "./",
@@ -20,6 +20,12 @@ const CORE = [
  "./assets/fonts/inter-latin-500-normal.woff2",
  "./assets/fonts/inter-latin-600-normal.woff2",
  "./assets/fonts/inter-latin-700-normal.woff2",
+ "./assets/photos/caderno.jpg",
+ "./assets/photos/cha.jpg",
+ "./assets/photos/eucalipto.jpg",
+ "./assets/photos/mar.jpg",
+ "./assets/photos/montanhas.jpg",
+ "./assets/photos/trilha.jpg",
  "./css/app.css",
  "./index.html",
  "./instalar.html",
@@ -31,6 +37,7 @@ const CORE = [
  "./js/lib/i18n-dict.js",
  "./js/lib/i18n.js",
  "./js/lib/ics.js",
+ "./js/lib/navigation.js",
  "./js/lib/pdf.js",
  "./js/lib/plan.js",
  "./js/lib/render.js",
