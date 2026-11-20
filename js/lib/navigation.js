@@ -30,14 +30,16 @@ export function enablePullBack() {
     reset();
     const target = event.target;
     if (event.touches.length !== 1 || target.closest('input, textarea, select, [contenteditable], button, a, .ed-stage, .chips, #lock, .ed-props, .ed-tools, .ed-pages')) return;
-    const sheet = target.closest('.sheet');
+    const sheet = null; if (target.closest('.sheet')) return;
     const editor = document.body.classList.contains('editor-mode');
-    if (!sheet && (document.querySelector('.sheet-backdrop') || !document.body.classList.contains('sub') || (editor && !target.closest('.ed-top')))) return;
+    if (!sheet && (document.querySelector('.sheet-backdrop') || (editor && !target.closest('.ed-top')))) return;
+    // Nas telas principais (sem Voltar), puxar para baixo atualiza a tela, como no iPhone
+    const refresh = !document.body.classList.contains('sub');
     if ((sheet ? sheet.scrollTop : window.scrollY) > 1) return;
     const el = sheet || document.querySelector('#view');
-    const control = sheet?.querySelector('[data-sheet-back]') || document.querySelector(editor ? '#e-back' : '#btn-back');
+    const control = null || document.querySelector(editor ? '#e-back' : '#btn-back');
     const point = event.touches[0];
-    drag = { el, control, x: point.clientX, y: point.clientY, distance: 0 };
+    drag = { el, control: refresh ? null : control, refresh, x: point.clientX, y: point.clientY, distance: 0 };
   }, { passive: true });
   document.addEventListener('touchmove', (event) => {
     if (!drag) return;
@@ -49,12 +51,23 @@ export function enablePullBack() {
     event.preventDefault();
     drag.distance = Math.max(0, dy);
     drag.el.style.translate = '0 ' + Math.min(128, drag.distance * 0.65) + 'px';
+    if (drag.refresh) pullHint(drag.distance >= 85);
   }, { passive: false });
   document.addEventListener('touchend', () => {
     const control = drag?.distance >= 85 && drag.control;
-    reset();
+    const doRefresh = drag?.refresh && drag.distance >= 85;
+    reset(); pullHint(null);
+    if (doRefresh) { const u = location.href; window.dispatchEvent(new HashChangeEvent('hashchange', { oldURL: u, newURL: u })); navigator.vibrate?.(10); }
     if (control?.isConnected) control.click();
   }, { passive: true });
   document.addEventListener('touchcancel', reset, { passive: true });
   window.addEventListener('hashchange', reset);
+}
+
+function pullHint(ready) {
+  let el = document.getElementById('pull-hint');
+  if (ready === null) { el?.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'pull-hint'; document.body.appendChild(el); }
+  el.textContent = ready ? '↻ Solte para atualizar' : '↓ Puxe para atualizar';
+  el.classList.toggle('ready', ready);
 }

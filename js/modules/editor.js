@@ -1,4 +1,3 @@
-import { back } from '../lib/navigation.js';
 // Editor visual com camadas — toque e mouse, guias, pinça, reenquadramento, desfazer/refazer, carrossel.
 import { t } from '../lib/i18n.js';
 import { db } from '../lib/store.js';
@@ -78,13 +77,13 @@ export async function render(view, { id }) {
   $('#e-undo', view).onclick = () => { if (undo.length) { redo.push(snap()); restore(undo.pop()); } };
   $('#e-redo', view).onclick = () => { if (redo.length) { undo.push(snap()); restore(redo.pop()); } };
   $('#e-name', view).oninput = () => save();
-  $('#e-back', view).onclick = async () => { save.flush(); back('#/criar'); };
+  $('#e-back', view).onclick = async () => { save.flush(); history.length > 1 ? history.back() : (location.hash = '#/criar'); };
   updateHist();
 
   // ---------- Desenho ----------
   let scale = 1; let raf = 0;
   function fit() {
-    const r = stage.getBoundingClientRect(); const pad = parseFloat(getComputedStyle(stage).paddingLeft) * 2;
+    const r = stage.getBoundingClientRect(); const pad = 10;
     const k = Math.min((r.width - pad) / F().w, (r.height - pad) / F().h);
     const dw = Math.max(120, Math.floor(F().w * k)); const dh = Math.floor(F().h * k);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -105,7 +104,7 @@ export async function render(view, { id }) {
       ctx.strokeStyle = cropMode ? BRAND.gold : '#2F80ED'; ctx.lineWidth = lw; ctx.setLineDash(cropMode ? [14, 8] : []);
       ctx.strokeRect(-b.w / 2, -b.h / 2, b.w, b.h); ctx.setLineDash([]);
       if (!l.locked && !cropMode) {
-        const hs = 11 / scale * Math.min(2, window.devicePixelRatio || 1);
+        const hs = 16 / scale * Math.min(2, window.devicePixelRatio || 1);
         const handle = (x, y, round) => { ctx.beginPath(); round ? ctx.arc(x, y, hs, 0, Math.PI * 2) : ctx.rect(x - hs, y - hs, hs * 2, hs * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke(); };
         handle(b.w / 2, b.h / 2, false);
         handle(0, -b.h / 2 - hs * 4, true);
@@ -123,7 +122,7 @@ export async function render(view, { id }) {
   const hit = (p) => { const ls = page().layers; for (let i = ls.length - 1; i >= 0; i--) { const l = ls[i]; if (l.hidden) continue; const q = local(l, p); if (Math.abs(q.x) <= q.b.w / 2 && Math.abs(q.y) <= q.b.h / 2) return l; } return null; };
   const handleAt = (l, p) => {
     if (!l || l.locked || cropMode) return null;
-    const q = local(l, p); const k = 11 / scale * Math.min(2, window.devicePixelRatio || 1); const hs = k * 2.4; const { b } = q;
+    const q = local(l, p); const k = 16 / scale * Math.min(2, window.devicePixelRatio || 1); const hs = k * 2.6; const { b } = q;
     if (Math.hypot(q.x - b.w / 2, q.y - b.h / 2) < hs) return 'resize';
     if (Math.hypot(q.x, q.y - (-b.h / 2 - k * 4)) < hs) return 'rotate';
     if (l.type === 'text' && Math.hypot(q.x - b.w / 2, q.y) < hs) return 'width';
@@ -318,7 +317,7 @@ export async function render(view, { id }) {
         <div class="grid c2" style="margin-top:8px">${range('opacity', t('Opacidade'), l.opacity ?? 1, 0.3, 1, 0.05)}</div>`;
       html += actions(l);
     }
-    if (kind === 'colors') html = `<h3 class="small" style="margin-bottom:10px">${t('Escolha as cores')}</h3><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px">${Object.entries(PALETTES).map(([k, p]) => `<button data-pal="${k}" aria-label="${t(p.name)}" style="border:2px solid ${proj.spec?.palette === k ? 'var(--primary)' : 'var(--line)'};border-radius:14px;padding:0;overflow:hidden;cursor:pointer;background:none"><span style="display:block;height:44px;background:${p.bg.type === 'solid' ? p.bg.c1 : `linear-gradient(${p.bg.c1},${p.bg.c2})`};position:relative"><b style="position:absolute;inset:0;display:grid;place-items:center;color:${p.ink};font-family:var(--serif);font-size:20px">Aa</b></span><span class="xs" style="display:block;padding:4px;color:var(--text-2)">${t(p.name)}</span></button>`).join('')}</div>`;
+    if (kind === 'colors') html = `<h3 class="small" style="margin-bottom:10px">${t('Escolha as cores')}</h3><div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">${Object.entries(PALETTES).map(([k, p]) => `<button data-pal="${k}" aria-label="${t(p.name)}" style="border:2px solid ${proj.spec?.palette === k ? 'var(--primary)' : 'var(--line)'};border-radius:14px;padding:0;overflow:hidden;cursor:pointer;background:none"><span style="display:block;height:44px;background:${p.bg.type === 'solid' ? p.bg.c1 : `linear-gradient(${p.bg.c1},${p.bg.c2})`};position:relative"><b style="position:absolute;inset:0;display:grid;place-items:center;color:${p.ink};font-family:var(--serif);font-size:20px">Aa</b></span><span class="xs" style="display:block;padding:4px;color:var(--text-2)">${t(p.name)}</span></button>`).join('')}</div>`;
     if (kind === 'fmtquick') html = `<h3 class="small" style="margin-bottom:10px">${t('Onde vai postar?')}</h3><div class="grid c2">${[['story', 'Story', '9:16'], ['portrait', 'Feed', '4:5']].map(([k, l2, r]) => `<button class="btn ${proj.format === k ? '' : 'secondary'}" data-fmt="${k}" style="min-height:58px;flex-direction:column;gap:0">${l2}<span class="xs" style="opacity:.8">${r}</span></button>`).join('')}</div>`;
     if (kind === 'shapes') html = `<h3 class="small" style="margin-bottom:8px">${t('Adicionar forma')}</h3><div class="chips">${[['rect', t('Retângulo')], ['round', t('Cartão')], ['ellipse', t('Círculo')], ['arch', t('Arco')], ['leaf', t('Folha')], ['line', t('Linha')], ['frame', t('Moldura')]].map(([k, v]) => `<button class="chip" data-add-shape="${k}">${v}</button>`).join('')}</div>`;
     if (kind === 'bg') {
@@ -329,7 +328,7 @@ export async function render(view, { id }) {
         ${bg.type && bg.type !== 'solid' ? `<label class="field"><span>${t('Segunda cor')}</span>${sw('bgc2', bg.c2)}</label>${bg.type === 'linear' ? range('angle', t('Ângulo'), bg.angle ?? 180, 0, 360) : ''}` : ''}
         <button class="btn sm ghost" data-a="bg-all" style="margin-top:8px">${t('Aplicar fundo a todas as páginas')}</button>`;
     }
-    if (kind === 'layers') html = `<h3 class="small" style="margin-bottom:8px">${t('Camadas')} <span class="xs muted">(${t('topo primeiro')})</span></h3>${[...page().layers].reverse().map((x) => `<div class="list-item" style="padding:6px 8px" data-pick="${x.id}"><span class="thumb" >${{ text: I.text, image: I.image, shape: I.shape, logo: I.logo }[x.type]}</span><span class="grow small"><b>${esc(x.type === 'text' ? x.text.slice(0, 40) : x.type === 'logo' ? t('Logomarca') : x.type === 'image' ? t('Foto') : t('Forma'))}</b></span><button class="icon-btn" data-vis="${x.id}" aria-label="${t('Mostrar/ocultar')}">${x.hidden ? I.eyeoff : I.eye}</button><button class="icon-btn" data-lk="${x.id}" aria-label="${t('Travar')}" style="opacity:${x.locked ? 1 : 0.35}">${I.lock}</button></div>`).join('') || `<p class="muted small">${t('Página vazia.')}</p>`}`;
+    if (kind === 'layers') html = `<h3 class="small" style="margin-bottom:8px">${t('Camadas')} <span class="xs muted">(${t('topo primeiro')})</span></h3>${[...page().layers].reverse().map((x) => `<div class="list-item" style="padding:6px 8px" data-pick="${x.id}"><span class="thumb" style="width:36px;height:36px">${{ text: I.text, image: I.image, shape: I.shape, logo: I.logo }[x.type]}</span><span class="grow small"><b>${esc(x.type === 'text' ? x.text.slice(0, 40) : x.type === 'logo' ? t('Logomarca') : x.type === 'image' ? t('Foto') : t('Forma'))}</b></span><button class="icon-btn" data-vis="${x.id}" aria-label="${t('Mostrar/ocultar')}">${x.hidden ? I.eyeoff : I.eye}</button><button class="icon-btn" data-lk="${x.id}" aria-label="${t('Travar')}" style="opacity:${x.locked ? 1 : 0.35}">${I.lock}</button></div>`).join('') || `<p class="muted small">${t('Página vazia.')}</p>`}`;
     if (kind === 'style') {
       const ph = proj.spec ? (proj.spec.phrase || phraseById(proj.spec.phraseId)) : null;
       if (proj.spec?.layout === 'carrossel-tema') html = `<p class="xs muted" style="margin:0 0 8px">${t('Carrossel temático: troque a paleta de todas as páginas de uma vez (é possível desfazer).')}</p><label class="field"><span>${t('Paleta')}</span><div class="chips">${Object.entries(PALETTES).map(([k, p]) => `<button class="chip" data-spal="${k}" aria-pressed="${proj.spec.palette === k}">${t(p.name)}</button>`).join('')}</div></label>`;
@@ -340,7 +339,7 @@ export async function render(view, { id }) {
     }
     if (kind === 'format') html = `<h3 class="small" style="margin-bottom:8px">${t('Formato')}</h3><div class="chips">${Object.entries(FORMATS).map(([k, f]) => `<button class="chip" data-fmt="${k}" aria-pressed="${proj.format === k}">${t(f.label)} · ${f.sub}</button>`).join('')}</div>
       <h3 class="small" style="margin:12px 0 8px">${t('Páginas (carrossel)')}</h3><div class="row"><button class="btn sm secondary" data-a="pg-add">${I.plus}${t('Nova página')}</button><button class="btn sm secondary" data-a="pg-dup">${I.dup}${t('Duplicar página')}</button><button class="btn sm secondary" data-a="pg-left">←</button><button class="btn sm secondary" data-a="pg-right">→</button><button class="btn sm danger" data-a="pg-del" ${proj.pages.length < 2 ? 'disabled' : ''}>${I.trash}</button></div>`;
-    props.innerHTML = `<div class="row between" style="margin-bottom:6px"><span class="eyebrow">${kind === 'layer' && l ? t({ text: 'Texto', image: 'Foto', shape: 'Forma', logo: 'Logomarca' }[l.type]) : ''}</span><button class="icon-btn" data-a="close" aria-label="${t('Fechar painel')}" >${I.close}</button></div>${html}`;
+    props.innerHTML = `<div class="row between" style="margin-bottom:6px"><span class="eyebrow">${kind === 'layer' && l ? t({ text: 'Texto', image: 'Foto', shape: 'Forma', logo: 'Logomarca' }[l.type]) : ''}</span><button class="icon-btn" data-a="close" aria-label="${t('Fechar painel')}" style="width:36px;height:36px">${I.close}</button></div>${html}`;
     if (l?.type === 'image' && l.assetId) db.get('assets', l.assetId).then((a) => { const el = $('#lic', props); if (el && a?.license) el.textContent = `${t('Imagem')}: ${a.author || '?'} · ${a.license} · Wikimedia Commons`; });
     requestAnimationFrame(() => { fit(); draw(); });
   }

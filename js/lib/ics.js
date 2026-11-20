@@ -15,3 +15,18 @@ export function buildICS(posts, { alarmMin = 60 } = {}) {
   lines.push('END:VCALENDAR');
   return lines.map((l) => (l.length > 74 ? l.match(/.{1,74}/g).join('\r\n ') : l)).join('\r\n');
 }
+
+/** Lembretes recorrentes para criar (aparecem na tela bloqueada via calendário do celular). days: 0..6, time 'HH:MM' */
+export function buildReminderICS({ days = [1, 3, 5], time = '09:00', url = '' } = {}) {
+  const map = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+  const now = new Date(); const [hh, mm] = time.split(':').map(Number);
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, hh, mm);
+  const loc = (d) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  const end = new Date(start.getTime() + 15 * 60000);
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Studio Karina Ximenes//Lembretes//PT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'BEGIN:VEVENT', `UID:kxs-lembrete-${Date.now()}@studio-karina-ximenes`, `DTSTAMP:${stamp(now)}`, `DTSTART:${loc(start)}`, `DTEND:${loc(end)}`,
+    `RRULE:FREQ=WEEKLY;BYDAY=${days.map((d) => map[d]).join(',')}`,
+    `SUMMARY:${esc('✨ Hora de criar no KXS')}`, `DESCRIPTION:${esc('Seu post de hoje leva 1 minuto: Story ou Feed em 3 passos. ' + url)}`, url ? `URL:${url}` : '',
+    'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${esc('✨ Hora de criar no KXS')}`, 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].filter(Boolean);
+  return lines.map((l) => (l.length > 74 ? l.match(/.{1,74}/g).join('\r\n ') : l)).join('\r\n');
+}

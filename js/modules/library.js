@@ -4,7 +4,7 @@ import { esc, uid, isoDate, slug } from '../lib/util.js';
 import { CATEGORIES, PHRASES, phraseById, captionFor } from '../lib/content.js';
 import { allArts, OFFICIAL, PALETTES, LAYOUTS, layoutsFor, buildPages, combinationsCount } from '../lib/templates.js';
 import { FORMATS } from '../lib/render.js';
-import { I, $, $$, artCard, sheet, toast, lazyThumbs, drawSpecThumb, drawThumb, ensureFonts, measureCtx, signature, exportPage, shareOrDownload, copyText, assetImage, confirmDialog, refresh } from '../ui.js';
+import { I, $, $$, artCard, sheet, toast, lazyThumbs, drawSpecThumb, drawThumb, zoomPages, ensureFonts, measureCtx, signature, exportPage, shareOrDownload, copyText, assetImage, confirmDialog, refresh } from '../ui.js';
 import { openSpec } from './shared.js';
 import { chooseImage } from './media.js';
 
@@ -74,7 +74,7 @@ export function preview(spec0) {
   let spec = { format: 'portrait', ...spec0 };
   const p = phraseById(spec.phraseId);
   const s = sheet(`<div class="row between"><span class="eyebrow">${esc(t(CATEGORIES.find((c) => c.id === p.cat)?.label))}</span><button class="icon-btn" data-close aria-label="${t('Fechar')}">${I.close}</button></div>
-    <div style="display:grid;place-items:center;margin:8px 0"><canvas id="big" style="max-height:46vh;width:auto;border-radius:12px;box-shadow:0 10px 30px #0002"></canvas></div>
+    <div style="display:grid;place-items:center;margin:8px 0"><canvas id="big" class="tap-zoom" title="${t('Toque na arte para ver em tela cheia')}" style="max-height:54vh;width:auto;border-radius:12px;box-shadow:0 10px 30px #0002"></canvas></div>
     <div class="seg" id="fm" style="display:flex;margin:0 auto 10px;width:max-content">${[['story', 'Story'], ['portrait', 'Feed'], ['square', t('Quadrado')]].map(([k, l]) => `<button data-f="${k}">${l}</button>`).join('')}</div>
     <button class="btn block" id="postnow" style="min-height:52px">${I.share}${t('Postar no Instagram')}</button>
     <div class="grid c2" style="margin-top:8px"><button class="btn secondary" id="edit">${I.wand}${t('Ajustar')}</button><button class="btn secondary" id="sched">${I.calendar}${t('Programar')}</button></div>
@@ -86,6 +86,7 @@ export function preview(spec0) {
     await ensureFonts();
     const pages = buildPages(spec, { sig: signature(), mctx: measureCtx() });
     await drawThumb(big, pages[0], spec.format, 720);
+    big.onclick = () => zoomPages(pages, spec.format);
     big.style.aspectRatio = `${FORMATS[spec.format].w}/${FORMATS[spec.format].h}`;
     $$('#fm button', s.el).forEach((b) => b.setAttribute('aria-pressed', b.dataset.f === spec.format));
     const lays = p.items ? ['lista', 'cartaolista', 'carrossel'] : layoutsFor(p);

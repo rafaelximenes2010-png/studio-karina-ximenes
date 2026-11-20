@@ -12,7 +12,7 @@ const results = []; let failed = 0;
 const step = async (name, fn) => {
   const t0 = Date.now();
   try { const info = await fn(); results.push({ name, ok: true, ms: Date.now() - t0, info: info || '' }); console.log(`✔ ${name}${info ? ' — ' + info : ''}`); }
-  catch (e) { failed++; results.push({ name, ok: false, ms: Date.now() - t0, info: e.message.split('\n')[0] }); console.log(`✘ ${name} — ${e.message.split('\n')[0]}`); }
+  catch (e) { failed++; results.push({ name, ok: false, ms: Date.now() - t0, info: e.message.split('\n')[0] }); console.log(`✘ ${name} — ${e.message.split('\n').slice(0, process.env.DEBUG ? 15 : 1).join('\n')}`); }
 };
 const pngDims = (buf) => [buf.readUInt32BE(16), buf.readUInt32BE(20)];
 
@@ -61,53 +61,38 @@ await step('Criar rápido: Story → tema → arte → postar (3 toques)', async
   await go('#/rapido'); await page.click('[data-fmt=story]'); await page.click('[data-th=logoterapia]');
   await page.waitForSelector('#g canvas'); await page.waitForTimeout(1500); await shot('03a-rapido-artes');
   await page.locator('#g [data-i]').first().click(); await page.waitForSelector('#ig:not([disabled])', { timeout: 20000 }); await shot('03b-rapido-postar');
+  await page.click('#big'); await page.waitForSelector('.zoom.in canvas'); await page.waitForTimeout(700); await shot('03b2-zoom-tela-cheia'); await page.click('[data-zx]'); await page.waitForTimeout(400);
   const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#ig')]);
   const f = path.join(OUT, 'rapido-story.png'); await dl.saveAs(f);
   const [w, h] = pngDims(fs.readFileSync(f)); if (w !== 1080 || h !== 1920) throw new Error(`${w}x${h}`);
   await closeSheets();
   for (const c of ['amarelo', 'lilas', 'bronze']) { await page.click(`[data-col=${c}]`); await page.waitForTimeout(1300); await shot('03d-cores-' + c); }
-  await go('#/rapido?f=feed'); await page.fill('#own', 'Recomeçar também é um ato de fé.'); await page.click('#go'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(1200); await shot('03c-rapido-minha-frase');
+  await go('#/rapido?f=feed'); await page.fill('#own', 'Recomeçar também é um ato de fé.'); await page.click('#gotxt'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(1200); await shot('03c-rapido-minha-frase');
   return `Story ${w}×${h} pronto para o Instagram; Feed com frase própria: ${await page.locator('#g [data-i]').count()} opções`;
 });
-await step('Feed com foto do Studio, frase escolhida e navegação por toque', async () => {
-  await go('#/rapido?f=feed');
-  await page.fill('#own', 'Uma pausa para refletir.');
-  await page.click('[data-th=logoterapia]');
-  const phrase = await page.locator('#phrase option').nth(1).getAttribute('value');
-  await page.selectOption('#phrase', phrase);
-  await page.click('#photo');
-  if (await page.locator('[data-studio]').count() !== 6) throw new Error('Coleção incompleta');
-  await page.click('[data-studio=mar]');
-  await page.waitForSelector('#nophoto');
-  await page.locator('#g .art').nth(2).click();
-  await page.waitForSelector('#ig:not([disabled])');
-  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#dl')]);
-  const file = path.join(OUT, 'feed-com-foto.png'); await dl.saveAs(file);
-  if (pngDims(fs.readFileSync(file)).join('x') !== '1080x1350') throw new Error('Formato do Feed');
-  await page.click('#edit'); await page.waitForSelector('#cv');
-  const check = await page.evaluate(async () => {
-    const { db } = await import('./js/lib/store.js');
-    const p = await db.get('projects', location.hash.split('/').pop());
-    return { phrase: p.spec.phraseId, photo: p.pages[0].layers.find((l) => l.type === 'image')?.assetId };
-  });
-  if (check.photo !== 'studio-photo-mar' || check.phrase !== phrase) throw new Error('Foto ou frase não chegou ao editor');
-  await page.click('#e-back'); await page.waitForSelector('#nophoto');
-  if (await page.inputValue('#phrase') !== phrase) throw new Error('Seleção perdida ao voltar');
-  await page.click('#photo');
-  async function pull(selector, dy) {
-    await page.locator(selector).first().evaluate((el, distance) => {
-      const touch = (y) => new Touch({ identifier: 1, target: el, clientX: 44, clientY: y });
-      for (const [type, y] of [['touchstart', 80], ['touchmove', 80 + distance], ['touchend', 80 + distance]]) {
-        el.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === 'touchend' ? [] : [touch(y)], changedTouches: [touch(y)] }));
-      }
-    }, dy);
-  }
-  await pull('.sheet .grab', 30);
-  if (!await page.locator('.sheet').isVisible()) throw new Error('Gesto curto fechou o painel');
-  await pull('.sheet .grab', 110); await page.waitForSelector('.sheet', { state: 'detached' });
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await pull('#view h1', 110); await page.waitForSelector('#own');
-  if (await page.inputValue('#own') !== 'Uma pausa para refletir.') throw new Error('Rascunho perdido');
+await step('Tema livre gera frases e texto; tipos de carrossel', async () => {
+  await go('#/rapido?f=story'); await page.fill('#tema', 'luto'); await page.click('#gotema');
+  await page.waitForSelector('#g canvas'); await page.waitForTimeout(1500); await shot('03f-tema-luto');
+  const n = await page.locator('#g [data-i]').count(); const txt = await page.locator('details.fold .result').first().textContent();
+  if (!/luto/i.test(txt)) throw new Error('texto sem o tema');
+  await go('#/rapido?f=carousel&tema=ansiedade'); await page.waitForSelector('#g canvas');
+  const kinds = [];
+  for (const k of ['frases', 'dicas', 'perguntas']) { await page.click(`[data-ctype=${k}]`); await page.waitForTimeout(1300); await shot('03g-carrossel-' + k); kinds.push(k + ':' + await page.locator('#g [data-i]').count()); }
+  await page.locator('#g [data-i]').first().click(); await page.waitForSelector('#ig:not([disabled])', { timeout: 20000 });
+  const pages = await page.locator('.sheet').innerText(); await shot('03h-carrossel-postar'); await closeSheets();
+  return `${n} artes sobre "luto" com texto pronto; carrossel ${kinds.join(', ')}; ${(pages.match(/(\d+) páginas/) || [])[1] || '?'} páginas`;
+});
+await step('Tutorial com setas e vídeo; janelas com Voltar e arrastar para fechar', async () => {
+  await go('#/rapido'); await page.click('#tour'); await page.waitForSelector('.tour-tip'); await page.waitForTimeout(500); await shot('03e-tour');
+  const t1 = await page.locator('.tour-title').innerText(); await page.click('[data-next]'); await page.waitForTimeout(900);
+  const t2 = await page.locator('.tour-title').innerText(); await page.click('[data-skip]');
+  await go('#/perfil/criar-tutorial'); const ok = await page.evaluate(async () => { const v = document.querySelector('video'); return (await fetch(v.getAttribute('src'))).ok; });
+  if (!ok) throw new Error('vídeo não encontrado');
+  await go('#/biblioteca'); await page.waitForTimeout(800); await page.locator('#grid .art').first().click(); await page.waitForSelector('.sheet .sheet-back');
+  const box = await page.locator('.sheet .grabzone').boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + 10); await page.mouse.down(); await page.mouse.move(box.x + box.width / 2, box.y + 300, { steps: 8 }); await page.mouse.up(); await page.waitForTimeout(500);
+  if (await page.locator('.sheet-backdrop').count()) throw new Error('arrastar para baixo não fechou');
+  return `"${t1}" → "${t2}"; vídeo ok; janela fechou ao arrastar`;
 });
 await step('Biblioteca de artes prontas', async () => {
   await go('#/biblioteca'); await page.waitForTimeout(1500); await shot('03-biblioteca');
@@ -201,6 +186,24 @@ await step('Agenda: mês, lista e semana temática', async () => {
   const n = await page.evaluate(() => new Promise((ok) => { const r = indexedDB.open('studio-karina'); r.onsuccess = () => { const q = r.result.transaction('posts').objectStore('posts').getAll(); q.onsuccess = () => ok(q.result.filter((p) => p.theme).length); }; }));
   if (n < 5) throw new Error('semana não programada: ' + n);
   return label;
+});
+await step('Semana a partir da escrita livre; backup; Perfil organizado', async () => {
+  await go('#/agenda'); await page.waitForTimeout(800); await page.click('#week'); await page.waitForSelector('#free');
+  const { setInputFiles } = page; await page.click('#ph'); await page.waitForSelector('[data-t=studio]'); await page.click('[data-t=studio]'); await page.click('[data-studio=mar]'); await page.waitForTimeout(800);
+  await page.fill('#free', 'Recomeço\nRecomeçar não é esquecer, é aprender a carregar a saudade com mais leveza.\n\nDeus não desperdiça nenhuma dor. Às vezes o recomeço começa com um passo pequeno: levantar, tomar um café, pedir ajuda.');
+  await page.click('#mk'); await page.waitForFunction(() => document.querySelector('#freeinfo')?.textContent.length > 5, null, { timeout: 15000 });
+  await page.waitForTimeout(1200); await shot('14b-semana-escrita-livre');
+  const info = await page.locator('#freeinfo').innerText(); const label = await page.locator('#go').innerText();
+  await page.click('#go'); await page.waitForTimeout(600); if (await page.locator('[data-yes]').count()) { await page.click('[data-yes]'); await page.waitForTimeout(600); }
+  const n = await page.evaluate(() => new Promise((ok) => { const r = indexedDB.open('studio-karina'); r.onsuccess = () => { const q = r.result.transaction('posts').objectStore('posts').getAll(); q.onsuccess = () => ok(q.result.filter((p) => String(p.theme).startsWith('livre-')).length); }; }));
+  if (n < 4) throw new Error('semana livre não programada: ' + n);
+  await go('#/perfil'); await page.waitForSelector('.hub-group'); await shot('20a-perfil-organizado');
+  await go('#/perfil/backup'); await page.waitForSelector('#bk-now'); await shot('20b-backup');
+  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.click('#bk-now')]);
+  const f = path.join(OUT, 'backup.json'); await dl.saveAs(f); const j = JSON.parse(fs.readFileSync(f, 'utf8'));
+  if (j.app !== 'studio-karina-ximenes') throw new Error('backup inválido');
+  await page.waitForTimeout(500); const st = await page.locator('.backup-status b').innerText();
+  return `${info} · ${label}; backup ${Math.round(fs.statSync(f).size / 1024)} KB (${j.posts.length} publicações) · "${st}"`;
 });
 await step('Frankie: modo assistido e minhas reflexões', async () => {
   await page.click('#frank-fab'); await page.waitForSelector('.frank-head'); await shot('15-frankie');

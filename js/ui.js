@@ -58,18 +58,34 @@ export function toast(msg, ms = 2600) {
   clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), ms);
 }
 
-/** Abre uma folha (bottom sheet). Retorna {el, close} */
+/** Abre uma folha (bottom sheet) com botão Voltar e arrastar-para-baixo para fechar (como no iPhone). Retorna {el, close} */
 export function sheet(inner, { onClose, label = '' } = {}) {
   const prev = document.activeElement;
-  const bd = h(`<div class="sheet-backdrop" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="sheet"><div class="sheet-nav"><div class="grab"></div><button type="button" class="btn ghost sm" data-sheet-back data-close>${I.back}${t('Voltar')}</button></div>${inner}</div></div>`);
-  const close = () => { if (!bd.isConnected) return; bd.remove(); document.removeEventListener('keydown', onKey); onClose?.(); prev?.focus?.({ preventScroll: true }); };
-  const onKey = (e) => { if (e.key === 'Escape' && [...document.querySelectorAll('.sheet-backdrop')].at(-1) === bd) close(); };
+  const bd = h(`<div class="sheet-backdrop" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="sheet"><div class="grabzone"><button class="sheet-back" type="button" data-close>${I.back}<span>${t('Voltar')}</span></button><span class="grab" aria-hidden="true"></span><span></span></div>${inner}</div></div>`);
+  const sh = bd.querySelector('.sheet');
+  let closed = false;
+  const close = () => { if (closed) return; closed = true; bd.remove(); document.removeEventListener('keydown', onKey); onClose?.(); prev?.focus?.(); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
   bd.addEventListener('click', (e) => { if (e.target === bd) close(); });
   document.addEventListener('keydown', onKey);
   bd.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) close(); });
+  // Arrastar para baixo: pela barrinha a qualquer momento, ou pelo conteúdo quando já está no topo
+  let y0 = null; let dy = 0; let fromGrab = false; let t0 = 0;
+  const start = (y, grab) => { if (!grab && sh.scrollTop > 0) return; y0 = y; dy = 0; fromGrab = grab; t0 = Date.now(); bd.classList.add('dragging'); };
+  const move = (y, ev) => { if (y0 === null) return; dy = Math.max(0, y - y0); if (dy > 0 && (fromGrab || sh.scrollTop <= 0)) { sh.style.transform = `translateY(${dy}px)`; bd.style.background = `rgba(23,26,22,${Math.max(0.05, 0.45 - dy / 900)})`; if (ev.cancelable) ev.preventDefault(); } };
+  const end = () => { if (y0 === null) return; y0 = null; bd.classList.remove('dragging'); sh.classList.add('closing');
+    const flick = dy > 40 && dy / Math.max(1, Date.now() - t0) > 0.5;
+    if (dy > 90 || flick) { sh.style.transform = 'translateY(110%)'; setTimeout(close, 200); } else { sh.style.transform = ''; bd.style.background = ''; setTimeout(() => sh.classList.remove('closing'), 230); } };
+  sh.addEventListener('touchstart', (e) => start(e.touches[0].clientY, !!e.target.closest('.grabzone')), { passive: true });
+  sh.addEventListener('touchmove', (e) => move(e.touches[0].clientY, e), { passive: false });
+  sh.addEventListener('touchend', end); sh.addEventListener('touchcancel', end);
+  const gz = sh.querySelector('.grabzone');
+  gz.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' || e.target.closest('button')) return; gz.setPointerCapture(e.pointerId); start(e.clientY, true); });
+  gz.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') move(e.clientY, e); });
+  gz.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') end(); });
   document.body.appendChild(bd);
-  setTimeout(() => (bd.querySelector('[autofocus]') || bd.querySelector('.sheet'))?.focus?.(), 50);
-  return { el: bd.querySelector('.sheet'), close };
+  setTimeout(() => (bd.querySelector('[autofocus]') || sh)?.focus?.(), 50);
+  return { el: sh, close };
 }
 
 export function confirmDialog(msg, { ok = t('Confirmar'), danger = false } = {}) {
@@ -189,3 +205,30 @@ export async function drawSpecThumb(canvas) {
 
 /** Redesenha a tela atual */
 export const refresh = () => window.dispatchEvent(new HashChangeEvent('hashchange'));
+
+/** Tela cheia para ver a arte de perto: arraste para o lado nas páginas, para baixo para fechar, toque duplo para ampliar. */
+export async function zoomPages(pages, format) {
+  const bd = h(`<div class="zoom" role="dialog" aria-modal="true" aria-label="${t('Ver arte')}">
+    <div class="zoom-top"><button class="zoom-x" data-zx aria-label="${t('Fechar')}">${I.close}</button><span class="zoom-n">${pages.length > 1 ? `1 / ${pages.length}` : ''}</span></div>
+    <div class="zoom-track">${pages.map(() => '<div class="zoom-page"><canvas></canvas></div>').join('')}</div>
+    <p class="zoom-hint">${pages.length > 1 ? t('Arraste para o lado · para baixo para fechar') : t('Toque duas vezes para ampliar · arraste para baixo para fechar')}</p></div>`);
+  document.body.appendChild(bd);
+  requestAnimationFrame(() => bd.classList.add('in'));
+  const close = () => { bd.classList.remove('in'); setTimeout(() => bd.remove(), 220); document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  bd.querySelector('[data-zx]').onclick = close;
+  const track = bd.querySelector('.zoom-track');
+  const cs = [...bd.querySelectorAll('canvas')];
+  pages.forEach((pg, i) => drawThumb(cs[i], pg, format, 1080));
+  track.addEventListener('scroll', () => { const i = Math.round(track.scrollLeft / track.clientWidth); const n = bd.querySelector('.zoom-n'); if (pages.length > 1) n.textContent = `${i + 1} / ${pages.length}`; }, { passive: true });
+  // toque duplo amplia
+  let last = 0;
+  track.addEventListener('click', (e) => { const now = Date.now(); const pg = e.target.closest('.zoom-page'); if (pg && now - last < 320) pg.classList.toggle('big'); last = now; });
+  // arrastar para baixo fecha
+  let y0 = null; let x0 = 0; let dy = 0;
+  bd.addEventListener('touchstart', (e) => { if (e.touches.length !== 1 || e.target.closest('.zoom-page.big')) { y0 = null; return; } y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; dy = 0; }, { passive: true });
+  bd.addEventListener('touchmove', (e) => { if (y0 === null) return; dy = e.touches[0].clientY - y0; const dx = Math.abs(e.touches[0].clientX - x0); if (dx > Math.abs(dy)) { y0 = null; track.style.transform = ''; return; } if (dy > 0) { track.style.transform = `translateY(${dy}px) scale(${Math.max(0.85, 1 - dy / 1500)})`; bd.style.background = `rgba(10,12,10,${Math.max(0.3, 0.94 - dy / 500)})`; if (e.cancelable) e.preventDefault(); } }, { passive: false });
+  bd.addEventListener('touchend', () => { if (y0 === null) return; y0 = null; if (dy > 100) close(); else { track.style.transform = ''; bd.style.background = ''; } });
+  return { close };
+}

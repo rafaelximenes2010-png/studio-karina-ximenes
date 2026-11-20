@@ -23,7 +23,7 @@ export const PALETTES = {
 
 export const LAYOUTS = {
   minimal: 'Minimalista', editorial: 'Editorial', aspas: 'Citação', moldura: 'Moldura', dividido: 'Dividido',
-  arco: 'Arco', foto: 'Fotográfico', fotoarco: 'Foto em arco', fotocirculo: 'Retrato circular', fotofaixa: 'Foto panorâmica', fotolista: 'Lista com foto', tipografico: 'Tipográfico', cartao: 'Cartão',
+  arco: 'Arco', foto: 'Fotográfico', fotoarco: 'Foto em arco', fotocirculo: 'Retrato circular', fotofaixa: 'Foto panorâmica', fotolista: 'Lista com foto', paisagem: 'Paisagem moderna', paisagemcentro: 'Paisagem com cartão', tipografico: 'Tipográfico', cartao: 'Cartão',
   circulo: 'Círculo', folhas: 'Botânico', campanha: 'Campanha', institucional: 'Institucional', lista: 'Lista', cartaolista: 'Lista em cartão',
 };
 const TEXT_LAYOUTS = ['minimal', 'editorial', 'aspas', 'moldura', 'dividido', 'arco', 'foto', 'fotoarco', 'tipografico', 'cartao', 'circulo', 'folhas', 'campanha', 'institucional'];
@@ -76,7 +76,8 @@ function footer(F, pal, sig, mode = 'center', onDark = null) {
     T((sig.split('|')[1] || 'Psicóloga').trim(), F.m + s + 26, y + s * 0.56, F.W - F.m * 2 - s - 26, 22, { align: 'left', font: 'sans', weight: 600, upper: true, ls: 6, color: ink }),
   ];
 }
-const labelOf = (p) => (p.campaign || CATEGORIES.find((c) => c.id === p.cat)?.label || '').toUpperCase();
+// O selo do tema aparece na arte, exceto para as frases da própria Karina (categoria interna)
+const labelOf = (p) => (p.campaign || (p.cat === 'minhas' ? '' : CATEGORIES.find((c) => c.id === p.cat)?.label) || '').toUpperCase();
 
 // -------------------- LAYOUTS --------------------
 const L = {
@@ -163,6 +164,22 @@ const L = {
     fit(t, F.top + ah + 40, ft[0].y - F.top - ah - 80, o.mctx);
     ls.push(t);
     return [...ls, ...ft];
+  },
+  // Modernos: paisagem real em tela cheia, texto limpo e logomarca
+  paisagem(p, pal, F, o) {
+    const ft = footer(F, pal, o.sig, 'left', BRAND.cream);
+    const t = T(p.text, F.m, 0, F.W - F.m * 2, 62, { font: 'sans', weight: 600, align: 'left', color: '#FFFFFF', shadow: true, lh: 1.18 });
+    fit(t, F.H * 0.42, ft[0].y - F.H * 0.42 - 70, o.mctx, 'bottom');
+    return [IMG(0, 0, F.W, F.H, { overlay: 0.85, ph1: pal.soft, ph2: BRAND.graphite }),
+      T('Para hoje', F.m, F.top + 10, F.W - F.m * 2, 24, { font: 'sans', weight: 700, ls: 6, color: '#FFFFFF', align: 'left', shadow: true }),
+      S('rect', F.m, F.H * 0.42 - 40, 90, 6, { fill: BRAND.gold, radius: 3 }), t, ...ft];
+  },
+  paisagemcentro(p, pal, F, o) {
+    const ft = footer(F, pal, o.sig, 'center', BRAND.cream);
+    const w = F.W - F.m * 2 - 40;
+    const t = T(p.text, (F.W - w) / 2, 0, w, 58, { color: BRAND.graphite, bg: 'rgba(245,238,226,0.9)', radius: 34, pad: 56, lh: 1.25 });
+    fit(t, F.H * 0.3, F.H * 0.36, o.mctx);
+    return [IMG(0, 0, F.W, F.H, { overlay: 0.45, ph1: pal.soft, ph2: BRAND.graphite }), t, ...ft];
   },
   fotocirculo(p, pal, F, o) {
     const layers = L.fotoarco(p, pal, F, o);
@@ -306,7 +323,10 @@ export function buildPages(spec, o = {}) {
     pages.push(page(L.institucional({ ...p, text: 'Salve este conteúdo e compartilhe com quem precisa. Cuidar da saúde emocional é um caminho possível.' }, pal, F, opts)));
     return pages;
   }
-  return [page(L[layout](p, pal, F, opts))];
+  const pg = page(L[layout](p, pal, F, opts));
+  // Foto escolhida para a semana (ou pelo Frankie) já entra na arte
+  if (spec.photo) for (const l of pg.layers) if (l.type === 'image' && !l.assetId) l.assetId = spec.photo;
+  return [pg];
 }
 
 /** Carrossel temático: capa + uma página por frase do tema + encerramento, mesma paleta */
@@ -315,11 +335,12 @@ export function buildThemeCarousel(spec, o = {}) {
   const fmt = FORMATS[spec.format] ? spec.format : 'portrait';
   const F = frame(fmt); const opts = { sig: o.sig || 'Karina Ximenes | Psicóloga', mctx: o.mctx };
   const cat = CATEGORIES.find((c) => c.id === spec.cat);
-  const ph = (spec.phraseIds || []).map(phraseById).filter(Boolean);
+  const ph = spec.phrases?.length ? spec.phrases : (spec.phraseIds || []).map(phraseById).filter(Boolean);
   const page = (layers) => ({ bg: { ...pal.bg }, layers: layers.map((l, i) => ({ ...l, tpl: i })), stampRing: pal.ring });
   const title = spec.title || `Semana de ${cat?.label || 'reflexão'}`;
-  const pages = [page(L.editorial({ cat: spec.cat, text: title, credit: `${ph.length} reflexões para a sua semana · arraste →` }, pal, F, opts))];
-  ph.forEach((p, i) => pages.push(page(L.minimal({ ...p, text: p.items ? p.title : p.text, campaign: `${i + 1} / ${ph.length} · ${cat?.label || ''}` }, pal, F, opts))));
+  const inner = L[spec.inner] && !LIST_LAYOUTS.includes(spec.inner) ? spec.inner : 'minimal';
+  const pages = [page(L.editorial({ cat: spec.cat, text: title, credit: `${ph.length} ${spec.credit || 'reflexões para a sua semana'} · arraste →` }, pal, F, opts))];
+  ph.forEach((p, i) => pages.push(page(L[inner]({ ...p, text: p.items ? p.title : p.text, campaign: `${i + 1} / ${ph.length} · ${cat?.label || ''}` }, pal, F, opts))));
   pages.push(page(L.institucional({ cat: spec.cat, text: 'Salve este carrossel e volte a ele ao longo da semana. Compartilhe com quem precisa ler isso hoje.' }, pal, F, opts)));
   return pages;
 }
