@@ -1,0 +1,13 @@
+name = "frankie-studio-karina"
+main = "ai-worker.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://rafaelximenes2010-png.github.io"
+DAILY_LIMIT = "150"
+# MODEL = "claude-sonnet-5-5"
+
+# Limite diário (opcional): crie um KV e descomente
+# [[kv_namespaces]]
+# binding = "RATE"
+# id = "COLE_O_ID_DO_KV"

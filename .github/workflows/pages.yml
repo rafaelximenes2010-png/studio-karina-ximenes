@@ -1,37 +1,97 @@
-name: Publicar Studio Karina
+name: Testar e publicar Studio Karina
+
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: read
-  pages: write
-  id-token: write
+
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
+  test:
+    name: Testes, PWA, marca e navegador
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dependências de teste
+        run: |
+          npm install --no-audit --no-fund
+          python -m pip install --quiet pillow
+          npx playwright install --with-deps chromium
+      - name: Verificar segredos expostos
+        run: |
+          if grep -RInE "(sk-ant-[A-Za-z0-9_-]{10,}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----)" --exclude-dir=node_modules --exclude-dir=.git . ; then
+            echo "Segredo encontrado no repositório"; exit 1; fi
+          echo "Nenhum segredo encontrado"
+      - name: Testes unitários
+        run: npm test
+      - name: Verificar PWA (manifesto, ícones, service worker)
+        run: node scripts/check-pwa.mjs
+      - name: Verificar ícones derivados da logomarca original
+        run: python scripts/check_brand.py
+      - name: Teste de ponta a ponta (navegador)
+        run: |
+          python -m http.server 8080 --bind 127.0.0.1 > /tmp/server.log 2>&1 &
+          sleep 2
+          npm run e2e
+      - name: Guardar evidências
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-e2e
+          path: evidence/
+          retention-days: 30
+
   deploy:
+    name: Publicar no GitHub Pages
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Preparar ícones oficiais iOS e Android
+      - name: Montar site (somente arquivos do app)
         run: |
-          python -m pip install --quiet cairosvg pillow
-          python - <<'PY'
-          import cairosvg
-          from PIL import Image
-          from io import BytesIO
-          for size in (180, 192, 512):
-              raw = cairosvg.svg2png(url='logo-oficial.svg', output_width=size, output_height=size)
-              Image.open(BytesIO(raw)).convert('RGB').save(f'icon-{size}.png', optimize=True)
-          PY
+          mkdir _site
+          cp -r index.html manifest.webmanifest sw.js css js assets _site/
+          echo "${{ github.sha }}" > _site/commit.txt
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Conferir site publicado (HTTP e commit)
+        env:
+          URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          for i in 1 2 3 4 5 6; do
+            got=$(curl -fsSL "${URL}commit.txt?t=$(date +%s)" || true)
+            [ "$got" = "${{ github.sha }}" ] && break
+            sleep 10
+          done
+          [ "$got" = "${{ github.sha }}" ] || { echo "Publicação não corresponde ao commit"; exit 1; }
+          for f in "" manifest.webmanifest sw.js assets/brand/icon-180.png assets/brand/icon-512.png assets/brand/logo-original.jpg js/app.js css/app.css; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "${URL}${f}")
+            echo "$code ${URL}${f}"; [ "$code" = "200" ] || exit 1
+          done
