@@ -119,12 +119,14 @@ function assisted({ task, text, tone, network, audience, lang }) {
 }
 
 export async function render(view) {
-  const hasAI = !!(await aiEndpoint());
+  const endpoint = await aiEndpoint();
+  const hasAI = !!(endpoint && prefs.get().aiCode);
   const texts = await db.all('texts');
   const mine = await db.all('phrases');
   let task = 'reflexao'; let tone = 'acolhedor';
   view.innerHTML = `
     <div class="frank-head" style="margin-bottom:12px"><span class="av">${I.sparkle}</span><div><div class="eyebrow">${t('Assistente de conteúdo')}</div><h1 class="h-title" style="margin-top:2px">Frankie</h1><p class="small muted" style="margin:2px 0 0">${t('Seu mini estúdio de textos: reflexões, legendas, títulos, roteiros e traduções.')}</p></div></div>
+    ${endpoint && !hasAI ? `<div class="card" style="margin-bottom:12px"><b>✨ ${t('Ligar a IA do Frankie')}</b><p class="xs muted" style="margin:4px 0 8px">${t('Digite o código de acesso uma vez neste aparelho.')}</p><div class="row" style="gap:8px"><input class="input grow" id="aicode" type="password" autocomplete="off" placeholder="${t('Código de acesso')}"><button class="btn" id="aisave">${t('Ligar')}</button></div></div>` : ''}
     ${hasAI ? `<p class="notice ai small">${t('IA conectada ao backend seguro. Todo conteúdo gerado deve ser revisado por você antes de publicar.')}</p>`
       : `<p class="notice small">${t('IA ainda não conectada. Você pode usar o modo assistido (estruturas e fórmulas, sem IA) ou conectar o backend seguro em Perfil → Ajustes.')} <a href="#/perfil/ajustes">${t('Configurar')}</a></p>`}
     <div class="card stack" style="margin-top:12px">
@@ -152,14 +154,18 @@ export async function render(view) {
 
   $('#tasks', view).onclick = (e) => { const b = e.target.closest('[data-task]'); if (!b) return; task = b.dataset.task; $$('#tasks .chip', view).forEach((x) => x.setAttribute('aria-pressed', x === b)); $('#hint', view).textContent = t(TASKS[task].hint); $('#langf', view).hidden = task !== 'traducao'; };
   $('#tones', view).onclick = (e) => { const b = e.target.closest('[data-tone]'); if (!b) return; tone = b.dataset.tone; $$('#tones .chip', view).forEach((x) => x.setAttribute('aria-pressed', x === b)); };
+  const sv = $('#aisave', view);
+  if (sv) sv.onclick = () => { const v = $('#aicode', view).value.trim(); if (!v) return toast(t('Digite o código de acesso.')); prefs.set({ aiCode: v }); toast(t('Frankie com IA ligado!')); render(view); };
   $('#go', view).onclick = async () => {
     const payload = { task, tone, text: $('#in', view).value.trim(), network: $('#net', view).value, audience: $('#aud', view).value.trim(), lang: $('#lang', view).value, uiLang: locale() };
     if (!payload.text) return toast(t('Conte ao Frankie o tema ou cole o texto.'));
     const out = $('#out', view); out.innerHTML = `<div class="card" style="margin-top:12px"><span class="spinner"></span> ${t('Frankie está escrevendo...')}</div>`;
     let text; let ai = false;
     try {
-      if (hasAI) { text = await callAI(payload); ai = true; }
-      else { text = assisted(payload); if (!text) { out.innerHTML = `<div class="card" style="margin-top:12px">${payload.task === 'traducao' ? t('A tradução precisa do Frankie (IA) conectado.') : t('Escreva o texto no campo acima para o Frankie trabalhar.')}</div>`; return; } }
+      if (hasAI) {
+        try { text = await callAI(payload); ai = true; }
+        catch (e) { text = assisted(payload); if (!text) throw e; toast(t('IA indisponível agora ({e}). Usei o modo assistido.', { e: e.message }), 5000); }
+      } else { text = assisted(payload); if (!text) { out.innerHTML = `<div class="card" style="margin-top:12px">${payload.task === 'traducao' ? t('A tradução precisa do Frankie (IA) conectado.') : t('Escreva o texto no campo acima para o Frankie trabalhar.')}</div>`; return; } }
     } catch (e) { out.innerHTML = `<div class="card" style="margin-top:12px">${e.message === 'no-endpoint' ? t('IA não configurada.') : t('Falha ao gerar: {e}', { e: esc(e.message) })}</div>`; return; }
     out.innerHTML = `<div class="card" style="margin-top:12px">
       <p class="notice ${ai ? 'ai' : ''} small" style="margin:0 0 10px">${ai ? t('🤖 Conteúdo gerado por IA. Verifique fatos, tom e ética. Referências citadas pela IA NÃO são confiáveis: confirme na Biblioteca científica.') : t('Modo assistido: estrutura gerada por fórmulas (sem IA).')}</p>
