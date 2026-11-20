@@ -1,7 +1,7 @@
 """Atualiza a lista de arquivos do cache offline (sw.js) e a VERSION. Uso: python3 scripts/gen_sw.py [versão]"""
 import os, re, json, sys
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-files = ['./', './index.html', './manifest.webmanifest']
+files = ['./', './index.html', './instalar.html', './manifest.webmanifest']
 for d in ['css', 'js', 'assets']:
     for dp, _, fs in os.walk(os.path.join(root, d)):
         for f in sorted(fs):
