@@ -923,4 +923,10 @@ export const DICT = {
   "Resumo em {n} frases": { en: "Summary in {n} sentences", es: "Resumen en {n} frases" },
   "A tradução precisa do Frankie (IA) conectado.": { en: "Translation needs Frankie (AI) connected.", es: "La traducción necesita a Frankie (IA) conectado." },
   "Escreva o texto no campo acima para o Frankie trabalhar.": { en: "Write the text in the field above for Frankie to work on.", es: "Escribe el texto en el campo de arriba para que Frankie trabaje." },
+  "Ligar a IA do Frankie": { en: "Turn on Frankie AI", es: "Activar la IA de Frankie" },
+  "Digite o código de acesso uma vez neste aparelho.": { en: "Enter the access code once on this device.", es: "Escribe el código de acceso una vez en este dispositivo." },
+  "Ligar": { en: "Turn on", es: "Activar" },
+  "IA indisponível agora ({e}). Usei o modo assistido.": { en: "AI unavailable right now ({e}). Used assisted mode.", es: "IA no disponible ahora ({e}). Usé el modo asistido." },
+  "Digite o código de acesso.": { en: "Enter the access code.", es: "Escribe el código de acceso." },
+  "Frankie com IA ligado!": { en: "Frankie AI is on!", es: "¡Frankie con IA activado!" },
 };
