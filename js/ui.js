@@ -82,7 +82,8 @@ export function sheet(inner, { onClose, label = '' } = {}) {
   const bd = h(`<div class="sheet-backdrop" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="sheet"><div class="grabzone"><button class="sheet-back" type="button" data-close>${I.back}<span>${t('Voltar')}</span></button><span class="grab" aria-hidden="true"></span><span></span></div>${inner}</div></div>`);
   const sh = bd.querySelector('.sheet');
   let closed = false;
-  const close = () => { if (closed) return; closed = true; bd.remove(); document.removeEventListener('keydown', onKey); onClose?.(); prev?.focus?.(); };
+  const close = () => { if (closed) return; closed = true; bd.remove(); document.removeEventListener('keydown', onKey); removeEventListener('hashchange', close); onClose?.(); prev?.focus?.(); };
+  addEventListener('hashchange', close); // mudou de tela: a janela fecha junto
   const onKey = (e) => { if (e.key === 'Escape') close(); };
   bd.addEventListener('click', (e) => { if (e.target === bd) close(); });
   document.addEventListener('keydown', onKey);
@@ -232,7 +233,8 @@ export async function zoomPages(pages, format) {
     <p class="zoom-hint">${pages.length > 1 ? t('Arraste para o lado · para baixo para fechar') : t('Toque duas vezes para ampliar · arraste para baixo para fechar')}</p></div>`);
   document.body.appendChild(bd);
   requestAnimationFrame(() => bd.classList.add('in'));
-  const close = () => { bd.classList.remove('in'); setTimeout(() => bd.remove(), 220); document.removeEventListener('keydown', onKey); };
+  const close = () => { bd.classList.remove('in'); setTimeout(() => bd.remove(), 220); document.removeEventListener('keydown', onKey); removeEventListener('hashchange', close); };
+  addEventListener('hashchange', close); // mudou de tela: fecha a tela cheia
   const onKey = (e) => { if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
   bd.querySelector('[data-zx]').onclick = close;

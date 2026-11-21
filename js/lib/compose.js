@@ -145,6 +145,17 @@ export function composeFromTheme(raw, { cat, context = '' } = {}) {
     hard ? 'Se você vive isso, procure ajuda: você não está sozinho. Em situação de risco, ligue 190 ou 180 (Central de Atendimento à Mulher).' : c === 'espiritualidade' ? 'A fé não nos tira da dor, mas nos dá chão para atravessá-la.' : 'Como lembrava Viktor Frankl, ainda podemos escolher a atitude diante do que vivemos.',
     'Se isso faz sentido para você, salve este post e compartilhe com quem precisa ler hoje.',
   ].join(' ');
+  // Várias listas e perguntas para os carrosséis não se repetirem
+  const mk = (suffix, title, items, cat = 'psicoeducacao') => ({ id: id(suffix), cat, generated: true, title, text: title, items });
+  const questionSets = [questions,
+    mk('perg-b', `Antes de dormir, pense sobre ${g.o}`, ['O que foi mais difícil hoje?', 'O que me trouxe alívio?', 'Pelo que posso agradecer?', 'Qual pequeno passo darei amanhã?'], 'logoterapia'),
+    mk('perg-c', 'Uma conversa honesta com você', ['Como eu realmente estou?', 'O que estou evitando sentir?', 'O que eu diria a alguém que amo nessa situação?', 'Onde encontro sentido agora?'], 'logoterapia'),
+    mk('perg-d', `Diário: ${g.t}`, [`Quando ${g.o} aparece com mais força?`, 'O que meu corpo sente nesses momentos?', 'O que já me ajudou antes?', 'Que verdade quero lembrar?'], 'logoterapia')];
+  const listSets = [list,
+    bright ? mk('lista-b', 'Pequenos rituais de cuidado', ['Comece o dia com calma', 'Faça uma pausa de 5 minutos', 'Escreva 3 gratidões', 'Caminhe ao ar livre', 'Durma no seu horário'])
+      : mk('lista-b', 'Primeiros socorros emocionais', ['Respire devagar por um minuto', 'Nomeie o que está sentindo', 'Beba água e mova o corpo', 'Fale com alguém de confiança', 'Busque ajuda se persistir']),
+    bright ? mk('lista-c', `Como trazer mais leveza ao dia`, ['Desacelere entre uma tarefa e outra', 'Olhe para o céu por um minuto', 'Ouça uma música que acalma', 'Agradeça por algo simples', 'Desligue as telas mais cedo'])
+      : mk('lista-c', `O que evitar quando ${g.o} aparece`, ['Cobrar-se perfeição', 'Isolar-se por muito tempo', 'Comparar a sua dor', 'Ignorar os sinais do corpo', 'Desistir de pedir ajuda'])];
   if (bright) { list.title = `Como aproveitar melhor ${g.o}`; list.text = list.title; list.items = ['Pare por um minuto e respire', 'Perceba os detalhes ao redor', 'Agradeça por algo simples', 'Compartilhe o momento com alguém', 'Guarde essa lembrança para os dias difíceis']; }
-  return { g, bright, theme: g.T, cat: c, phrases, list, questions, caption: `${text}\n\n${tags}`, text };
+  return { g, bright, questionSets, listSets, theme: g.T, cat: c, phrases, list, questions, caption: `${text}\n\n${tags}`, text };
 }
