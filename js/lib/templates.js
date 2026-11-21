@@ -23,7 +23,7 @@ export const PALETTES = {
 
 export const LAYOUTS = {
   minimal: 'Minimalista', editorial: 'Editorial', aspas: 'Citação', moldura: 'Moldura', dividido: 'Dividido',
-  arco: 'Arco', foto: 'Fotográfico', fotoarco: 'Foto em arco', fotocirculo: 'Retrato circular', fotofaixa: 'Foto panorâmica', fotolista: 'Lista com foto', paisagem: 'Paisagem moderna', paisagemcentro: 'Paisagem com cartão', tipografico: 'Tipográfico', cartao: 'Cartão',
+  arco: 'Arco', foto: 'Fotográfico', fotoarco: 'Foto em arco', fotocirculo: 'Retrato circular', fotofaixa: 'Foto panorâmica', fotolista: 'Lista com foto', comparativo: 'Lado a lado', paisagem: 'Paisagem moderna', paisagemcentro: 'Paisagem com cartão', tipografico: 'Tipográfico', cartao: 'Cartão',
   circulo: 'Círculo', folhas: 'Botânico', campanha: 'Campanha', institucional: 'Institucional', lista: 'Lista', cartaolista: 'Lista em cartão',
 };
 const TEXT_LAYOUTS = ['minimal', 'editorial', 'aspas', 'moldura', 'dividido', 'arco', 'foto', 'fotoarco', 'tipografico', 'cartao', 'circulo', 'folhas', 'campanha', 'institucional'];
@@ -166,6 +166,47 @@ const L = {
     return [...ls, ...ft];
   },
   // Modernos: paisagem real em tela cheia, texto limpo e logomarca
+  // Lado a lado: título, duas colunas (faz bem × faz mal), frase final e logomarca
+  comparativo(p, pal, F, o) {
+    const c = p.compare || { title: p.text, sub: '', left: { title: 'Faz bem', items: [] }, right: { title: 'Evite', items: [] }, close: '' };
+    const W = F.W, m = F.m, story = F.H / F.W > 1.5;
+    const ink = pal.ink, gold = pal.accent || BRAND.gold;
+    const out = [];
+    const title = T(c.title, m, F.top, W - m * 2, story ? 64 : 56, { weight: 600, color: ink, lh: 1.12 });
+    fit(title, F.top, story ? 190 : 150, o.mctx, 'top'); out.push(title);
+    let y = title.y + textH(title, o.mctx) + 14;
+    out.push(S('line', W / 2 - 70, y, 140, 6, { stroke: gold, sw: 3 })); y += 20;
+    if (c.sub) { const sub = T(c.sub, m, y, W - m * 2, story ? 40 : 34, { italic: true, color: ink, lh: 1.15 }); out.push(sub); y += textH(sub, o.mctx) + 26; }
+    const ft = footer(F, pal, o.sig, 'left', null);
+    const closeT = c.close ? T(c.close, m, 0, W - m * 2, story ? 34 : 28, { italic: true, color: ink, lh: 1.2 }) : null;
+    const closeH = closeT ? textH(closeT, o.mctx) : 0;
+    const bottom = ft[0].y - (closeT ? closeH + 46 : 30);
+    const gap = Math.round(W * 0.03), colW = (W - m * 2 - gap) / 2, badge = Math.round(W * 0.075);
+    const panelTop = y + badge / 2, panelH = bottom - panelTop;
+    const cols = [[c.left, '#E8F0E1', '#4E7A45', '✓'], [c.right, '#FBE9DA', '#C0682E', '✕']];
+    cols.forEach(([col, bg, tone, mark], i) => {
+      const x = m + i * (colW + gap);
+      out.push(S('rect', x, panelTop, colW, panelH, { fill: bg, radius: 34 }));
+      out.push(S('ellipse', x + colW / 2 - badge / 2, panelTop - badge / 2, badge, badge, { fill: tone }));
+      out.push(T(mark, x + colW / 2 - badge / 2, panelTop - badge / 2 + badge * 0.16, badge, Math.round(badge * 0.58), { font: 'sans', weight: 700, color: '#FFFFFF' }));
+      const head = T(col.title, x + 18, panelTop + badge / 2 + 14, colW - 36, story ? 44 : 38, { weight: 600, color: tone, lh: 1.05 });
+      fit(head, panelTop + badge / 2 + 14, 110, o.mctx, 'top'); out.push(head);
+      let iy = head.y + textH(head, o.mctx) + 10;
+      out.push(S('line', x + colW / 2 - 50, iy, 100, 4, { stroke: gold, sw: 2 })); iy += 22;
+      const items = col.items.slice(0, story ? 8 : 7);
+      const avail = panelTop + panelH - 24 - iy;
+      let size = story ? 42 : 36; const est = (sz) => items.reduce((h, it) => h + textH(T(it, 0, 0, colW - 84, sz, { font: 'sans', weight: 500, lh: 1.15 }), o.mctx) + sz * 0.45, 0);
+      while (size > 16 && est(size) > avail) size -= 1;
+      const spare = Math.max(0, avail - est(size)); const extra = Math.min(size * 0.9, spare / Math.max(1, items.length));
+      for (const it of items) {
+        const li = T(it, x + 52, iy, colW - 70, size, { font: 'sans', weight: 500, color: '#33382F', align: 'left', lh: 1.15 });
+        out.push(S('ellipse', x + 26, iy + size * 0.38, size * 0.42, size * 0.42, { fill: tone }));
+        out.push(li); iy += textH({ ...li, w: colW - 84 }, o.mctx) + size * 0.45 + extra;
+      }
+    });
+    if (closeT) { closeT.y = bottom + 18; out.push(S('line', m, bottom + 2, W - m * 2, 2, { stroke: gold, sw: 1.5 })); out.push(closeT); }
+    return [...out, ...ft];
+  },
   paisagem(p, pal, F, o) {
     const ft = footer(F, pal, o.sig, 'left', BRAND.cream);
     const t = T(p.text, F.m, 0, F.W - F.m * 2, 62, { font: 'sans', weight: 600, align: 'left', color: '#FFFFFF', shadow: true, lh: 1.18 });

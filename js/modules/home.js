@@ -4,7 +4,7 @@ import { esc, isoDate, fmtDate } from '../lib/util.js';
 import { PHRASES, CATEGORIES } from '../lib/content.js';
 import { allArts } from '../lib/templates.js';
 import { I, artCard, sheet, $, $$, lazyThumbs, drawSpecThumb, statusLabel } from '../ui.js';
-import { openSpec, projectList, wireProjectThumbs } from './shared.js';
+import { openSpec, projectList, projectStrip, docStrip, wireProjectThumbs } from './shared.js';
 
 function greeting() {
   const h = new Date().getHours();
@@ -52,12 +52,12 @@ export async function render(view) {
   <div class="hscroll">${daily.map((a) => artCard({ phraseId: a.phraseId, layout: a.layout, palette: a.palette, format: 'portrait' }, { title: CATEGORIES.find((c) => c.id === a.cat)?.label })).join('')}</div>
 
   <h2 class="h-section">${t('Projetos recentes')}<a href="#/criar">${t('Todos')} →</a></h2>
-  <div id="recent">${projectList(projects.slice(0, 4), { empty: t('Seus projetos aparecerão aqui. Comece por uma arte pronta!') })}</div>
+  <div id="recent">${projectStrip(projects.slice(0, 10), { empty: t('Seus projetos aparecerão aqui. Comece por uma arte pronta!') })}</div>
 
-  ${docs.length ? `<h2 class="h-section">${t('Documentos recentes')}<a href="#/documentos">${t('Todos')} →</a></h2>${docs.slice(0, 3).map((d) => `<a class="list-item" href="#/documento/${d.id}"><span class="thumb">${I.doc}</span><span class="grow"><b>${esc(d.title)}</b><span class="xs muted">${fmtDate(d.updatedAt, locale())}</span></span></a>`).join('')}` : ''}
+  ${docs.length ? `<h2 class="h-section">${t('Documentos recentes')}<a href="#/documentos">${t('Todos')} →</a></h2>${docStrip(docs.slice(0, 8))}` : ''}
   <p class="xs muted" style="text-align:center;margin-top:32px">Karina Ximenes · Psicóloga — Pessoas • Histórias • Recomeços</p>`;
 
-  wireProjectThumbs(view, projects.slice(0, 4));
+  wireProjectThumbs(view, projects.slice(0, 10));
   view.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-art]'); if (!b) return;
     const spec = JSON.parse(decodeURIComponent(b.dataset.art));

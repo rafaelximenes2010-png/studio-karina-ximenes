@@ -9,6 +9,7 @@ import { I, $, $$, sheet, toast, zoomPages, drawThumb, exportPage, ensureFonts, 
 import { chooseImage, saveImageBlob } from './media.js';
 import { monthPhotos, landscapePhotos } from './photos.js';
 import { composeFromTheme } from '../lib/compose.js';
+import { COMPARES, compareCaption } from '../lib/compare.js';
 
 // Formatos (Status do WhatsApp usa a mesma medida do Story)
 export const QFORMATS = {
@@ -22,7 +23,7 @@ export const QFORMATS = {
 const GROUPS = [
   ['Fé e sentido', [['logoterapia', 'Sentido da vida', 'Logoterapia e Viktor Frankl', '🌱', '#E6EDE3'], ['espiritualidade', 'Fé e esperança', 'Graça, providência e recomeços', '✝️', '#EFE3CF']]],
   ['Cuidado emocional', [['emocional', 'Emoções e autocuidado', 'Ansiedade, limites, descanso', '💛', '#FBE7A1'], ['reflexoes', 'Reflexão do dia', 'Frases curtas para acolher', '☀️', '#FFF2CC'], ['relacoes', 'Relacionamentos', 'Família, amor e vínculos', '🤝', '#E9DEF7']]],
-  ['Terapia e ciência', [['emdr', 'EMDR e trauma', 'Como funciona, o que esperar', '🧠', '#E9DEF7'], ['neuro', 'Cérebro e hábitos', 'Neurociência do dia a dia', '✨', '#E6EDE3'], ['psicoeducacao', 'Dicas em lista', 'Passo a passo e sinais de alerta', '📝', '#F6E5CE']]],
+  ['Terapia e ciência', [['emdr', 'EMDR e trauma', 'Como funciona, o que esperar', '🧠', '#E9DEF7'], ['neuro', 'Cérebro e hábitos', 'Neurociência do dia a dia', '✨', '#E6EDE3'], ['ladoalado', 'Lado a lado', 'O que faz bem × o que faz mal', '⚖️', '#E8F0E1'], ['psicoeducacao', 'Dicas em lista', 'Passo a passo e sinais de alerta', '📝', '#F6E5CE']]],
   ['Seu trabalho e datas', [['datas', 'Campanhas do mês', 'Janeiro Branco, Setembro Amarelo…', '📅', '#F6E5CE'], ['divulgacao', 'Meu trabalho', 'Atendimento, abordagens, agenda', '💼', '#EEE7DA'], ['minhas', 'Minhas reflexões', 'As frases que você escreveu', '🕊️', '#F7F1FF']]],
 ];
 const LAY = {
@@ -31,6 +32,9 @@ const LAY = {
   square: ['minimal', 'aspas', 'cartao', 'circulo', 'moldura', 'editorial', 'folhas'],
 };
 const PHOTO_LAY = ['foto', 'fotoarco', 'fotofaixa', 'fotocirculo'];
+// Com a foto da própria Karina: modernos primeiro
+const OWN_LAY = ['paisagem', 'foto', 'paisagemcentro', 'fotoarco', 'fotofaixa', 'fotocirculo'];
+const MIX = ['reflexoes', 'logoterapia', 'espiritualidade', 'emocional', 'relacoes'];
 const MODERN_LAY = ['paisagem', 'paisagemcentro', 'paisagem', 'foto', 'paisagemcentro', 'fotofaixa'];
 const STUDIO = ['eucalipto', 'mar', 'caderno', 'trilha', 'cha', 'montanhas'];
 const PALS = Object.keys(PALETTES);
@@ -40,22 +44,37 @@ const go = (q) => { location.hash = '#/rapido' + (q ? '?' + new URLSearchParams(
 export async function render(view, { query }) {
   const fk = QFORMATS[query.get('f')] ? query.get('f') : (query.get('f') === 'portrait' ? 'feed' : null);
   const th = query.get('th'); const txt = query.get('txt'); const tema = query.get('tema');
+  if (query.get('foto') === '1' && fk) return arts(view, fk, th || 'mix', txt, tema, true);
   if (!fk) return formats(view);
   if (!th && !txt && !tema) return themes(view, fk);
   return arts(view, fk, th, txt, tema);
 }
 
 function formats(view) {
+  const big = [['story', '📱', 'Story', 'Instagram · 9:16'], ['feed', '🖼️', 'Feed', 'Instagram · 4:5'], ['foto', '📷', 'Da minha foto', 'Escolha a foto e pronto'], ['carousel', '🗂️', 'Carrossel', 'Várias páginas']];
   view.innerHTML = `
     <div class="row between"><div><div class="eyebrow">${t('Criar')} · ${t('passo')} 1 ${t('de')} 3</div><h1 class="h-title" style="margin-top:4px">${t('O que vamos postar?')}</h1></div><button class="btn sm ghost" id="tour">${I.help}${t('Como fazer')}</button></div>
-    <div class="qfmt" id="fmts" style="margin-top:16px">${Object.entries(QFORMATS).map(([k, f]) => `
-      <button data-fmt="${k}" class="${f.wide ? 'wide' : ''}"><span class="shape" style="width:${f.w}px;height:${f.h}px">${k === 'carousel' ? '<b style="font-size:11px">1·2·3</b>' : f.wa ? '<b style="font-size:16px">💬</b>' : ''}</span><span style="text-align:${f.wide ? 'left' : 'center'}"><b style="display:block">${t(f.label)}</b><small>${t(f.sub)}</small></span></button>`).join('')}</div>
+    <div class="qmain" id="fmts">${big.map(([k, ic, l, sub]) => k === 'foto'
+      ? `<label class="qbig photo" data-big="foto"><input type="file" accept="image/*" id="myph" hidden><span class="ic">${ic}</span><b>${t(l)}</b><small>${t(sub)}</small></label>`
+      : `<button class="qbig" data-fmt="${k}"><span class="ic">${ic}</span><b>${t(l)}</b><small>${t(sub)}</small></button>`).join('')}</div>
+    <div class="qgroup" style="margin-top:16px">${t('Mais formatos')}</div>
+    <div class="chips" id="fmts2"><button class="chip" data-fmt="status">💬 ${t('Status do WhatsApp')}</button><button class="chip" data-fmt="square">◻️ ${t('Quadrado 1:1')}</button><button class="chip" data-fmt="feed" data-th="ladoalado">⚖️ ${t('Lado a lado')}</button></div>
     <h2 class="h-section" style="font-size:20px">${t('Outras formas de criar')}</h2>
     <a class="list-item" href="#/biblioteca"><span class="thumb">${I.grid}</span><span class="grow"><b>${t('Artes prontas')}</b><span class="xs muted">${t('Centenas de modelos com a sua marca')}</span></span></a>
     <a class="list-item" href="#/agenda"><span class="thumb">${I.calendar}</span><span class="grow"><b>${t('Semana temática')}</b><span class="xs muted">${t('Uma semana inteira de posts de uma vez')}</span></span></a>
     <a class="list-item" href="#/textos"><span class="thumb">${I.sparkle}</span><span class="grow"><b>Frankie</b><span class="xs muted">${t('Textos, legendas e minhas reflexões')}</span></span></a>
     <a class="list-item" href="#/criar"><span class="thumb">${I.pages}</span><span class="grow"><b>${t('Meus projetos e editor completo')}</b><span class="xs muted">${t('Continuar uma arte, documentos')}</span></span></a>`;
-  view.onclick = (e) => { const b = e.target.closest('[data-fmt]'); if (b) go({ f: b.dataset.fmt }); };
+  view.onclick = (e) => { const b = e.target.closest('[data-fmt]'); if (b) go(b.dataset.th ? { f: b.dataset.fmt, th: b.dataset.th } : { f: b.dataset.fmt }); };
+  // Da minha foto: 1) toca aqui 2) escolhe a foto 3) toca na arte
+  $('#myph', view).onchange = async (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    toast(t('Preparando sua foto...'));
+    try {
+      const a = await saveImageBlob(f, { name: f.name || 'minha-foto', source: 'celular' });
+      sessionStorage.setItem('sk-photo', a.id); sessionStorage.removeItem('sk-paisagem');
+      go({ f: 'story', th: 'mix', foto: '1' });
+    } catch (err) { toast(err.message || t('Não foi possível usar esta imagem.')); }
+  };
   $('#tour', view).onclick = () => import('./tour.js').then((m) => m.startTour('criar'));
 }
 
@@ -85,7 +104,7 @@ function themes(view, fk) {
   $('#gotxt', view).onclick = () => { const v = $('#own', view).value.trim(); if (!v) return toast(t('Escreva sua frase.')); go({ f: fk, txt: v.slice(0, 280) }); };
 }
 
-async function arts(view, fk, th, txt, tema) {
+async function arts(view, fk, th, txt, tema, own = false) {
   await ensureFonts();
   const F = QFORMATS[fk]; const fmt = F.render;
   const st = { colors: sessionStorage.getItem('sk-colors') || 'todas', photo: sessionStorage.getItem('sk-photo') || null, shift: +(sessionStorage.getItem('sk-shift-' + (th || tema || 'txt')) || 0) };
@@ -97,6 +116,14 @@ async function arts(view, fk, th, txt, tema) {
   const specs = () => {
     const ks = palsOf();
     const pal = (i, k = 5) => ks[(st.shift * k + i * 3) % ks.length];
+    if (th === 'ladoalado') {
+      const light = ks.filter((k) => /^#(F|E)/i.test(PALETTES[k]?.bg?.c1 || '')); const lp = light.length ? light : ks;
+      return Array.from({ length: Math.min(N, COMPARES.length) }, (_, i) => {
+        const c = COMPARES[(st.shift * N + i) % COMPARES.length];
+        return { layout: 'comparativo', phrase: { id: c.id, cat: 'psicoeducacao', generated: true, text: c.title, compare: c }, palette: lp[(st.shift + i) % lp.length],
+          format: fmt === 'square' ? 'portrait' : fmt, caption: compareCaption(c, signature()) };
+      });
+    }
     if (fk === 'carousel') {
       const cap = comp && tema ? comp.caption : undefined;
       if (st.ctype === 'dicas' || st.ctype === 'perguntas') {
@@ -117,11 +144,11 @@ async function arts(view, fk, th, txt, tema) {
       });
     }
     const modern = st.photo && st.photo === sessionStorage.getItem('sk-paisagem');
-    const lays = modern ? MODERN_LAY : st.photo ? PHOTO_LAY : LAY[fmt];
+    const lays = modern ? MODERN_LAY : own && st.photo ? OWN_LAY : st.photo ? PHOTO_LAY : LAY[fmt];
     let list;
     if (txt) list = Array.from({ length: N }, () => ({ id: 'custom', cat: 'minhas', text: txt }));
     else if (tema) list = Array.from({ length: N }, (_, i) => comp.phrases[(st.shift * N + i) % comp.phrases.length]);
-    else { const all = PHRASES.filter((p) => (th === 'minhas' ? p.custom : p.cat === th) && (fmt !== 'story' || !p.items)); list = Array.from({ length: N }, (_, i) => all[(st.shift * N + i) % all.length]); }
+    else { const all = PHRASES.filter((p) => (th === 'minhas' ? p.custom : th === 'mix' ? MIX.includes(p.cat) || p.custom : p.cat === th) && (fmt !== 'story' || !p.items) && (th !== 'mix' || !p.items)); list = Array.from({ length: N }, (_, i) => all[(st.shift * N + i) % all.length]); }
     return list.filter(Boolean).map((p, i) => ({
       ...(p.id === 'custom' || p.generated ? { phrase: p } : { phraseId: p.id }),
       layout: p.items && st.photo ? 'fotolista' : p.items ? (i % 2 ? 'cartaolista' : 'lista') : lays[(st.shift * 3 + i) % lays.length],
@@ -129,17 +156,24 @@ async function arts(view, fk, th, txt, tema) {
     }));
   };
   const mine = (await db.all('assets')).slice(0, 12);
-  const label = txt ? t('Sua frase') : tema ? comp.theme : t(themeLabel || '');
+  const label = txt ? t('Sua frase') : tema ? comp.theme : th === 'mix' ? t('Minha foto') : t(themeLabel || '');
+  const ownBlock = own ? `<div class="own-head">
+      <img data-asset="${st.photo || ''}" alt="" class="own-ph">
+      <div class="grow"><b>${t('Sua foto já está nas artes')}</b><small>${t('Escolha o formato e o assunto, ou toque numa arte para postar.')}</small>
+        <label class="btn sm secondary" style="margin-top:8px">${I.image}${t('Trocar foto')}<input type="file" accept="image/*" id="ownswap" hidden></label></div></div>
+    <div class="chips" id="ownfmt">${[['story', '📱 Story'], ['feed', '🖼️ Feed'], ['status', '💬 Status'], ['square', '◻️ ' + t('Quadrado')]].map(([k, l]) => `<button class="chip" data-ownf="${k}" aria-pressed="${fk === k}">${l}</button>`).join('')}</div>
+    <div class="chips" id="ownth" style="margin-top:6px">${[['mix', '✨ ' + t('Variado')], ['espiritualidade', '🙏 ' + t('Fé')], ['logoterapia', '🧭 ' + t('Sentido')], ['emocional', '🌿 ' + t('Cuidado')], ['relacoes', '🤝 ' + t('Relações')], ...(PHRASES.some((p) => p.custom) ? [['minhas', '🕊️ ' + t('Minhas')]] : [])].map(([k, l]) => `<button class="chip" data-ownt="${k}" aria-pressed="${th === k}">${l}</button>`).join('')}</div>` : '';
   view.innerHTML = `
-    <div class="eyebrow">${t(F.label)} · ${esc(label)} · ${t('passo')} 3 ${t('de')} 3</div>
+    <div class="eyebrow">${own ? `📷 ${t('Da minha foto')} · ${t(F.label)}` : `${t(F.label)} · ${esc(label)} · ${t('passo')} 3 ${t('de')} 3`}</div>
     <h1 class="h-title" style="margin:4px 0 2px">${t('Escolha uma arte')}</h1>
     <p class="small muted" style="margin:0 0 10px">${t('Toque na arte para ver grande e postar.')}</p>
     ${fk === 'carousel' ? `<div class="qgroup" style="margin-top:6px">🗂️ ${t('Tipo de carrossel')}</div>
     <div class="chips" id="ctype">${[['frases', '💬 ' + t('Frases do tema')], ['dicas', '📝 ' + t('Dicas passo a passo')], ['perguntas', '❓ ' + t('Perguntas para refletir')]].map(([k, l]) => `<button class="chip" data-ctype="${k}" aria-pressed="${st.ctype === k}">${l}</button>`).join('')}</div>` : ''}
     ${tema ? `<details class="fold" style="margin:8px 0"><summary>✨ ${t('Texto pronto sobre')} ${esc(comp.theme)}</summary><div><div class="result small">${esc(comp.caption)}</div><button class="btn sm ghost" id="copytema" style="margin-top:8px">${I.copy}${t('Copiar texto')}</button></div></details>` : ''}
-    ${fk === 'carousel' ? '' : `<div class="qgroup" style="margin-top:6px">🏞️ ${t('Paisagens reais · posts modernos')}</div>
+    ${ownBlock}
+    ${fk === 'carousel' || own ? '' : `<div class="qgroup" style="margin-top:6px">🏞️ ${t('Paisagens reais · posts modernos')}</div>
     <div class="qphotos" id="land"><span class="xs muted" style="align-self:center">${t('Carregando paisagens...')}</span></div>`}
-    ${fk === 'carousel' ? '' : `<div class="qgroup" style="margin-top:6px">📷 ${t('Foto (opcional)')}</div>
+    ${fk === 'carousel' || own ? '' : `<div class="qgroup" style="margin-top:6px">📷 ${t('Foto (opcional)')}</div>
     <div class="qphotos" id="ph">
       <button data-ph="" aria-pressed="${!st.photo}">${t('Sem foto')}</button>
       <button data-add aria-label="${t('Do celular')}">${I.plus}</button>
@@ -161,7 +195,7 @@ async function arts(view, fk, th, txt, tema) {
       const a = await saveImageBlob(await (await fetch(p.full)).blob(), { name: p.title, source: 'wikimedia', license: p.license, author: p.author, url: p.page });
       sessionStorage.setItem('sk-photo', a.id); modern ? sessionStorage.setItem('sk-paisagem', a.id) : sessionStorage.removeItem('sk-paisagem');
       toast((modern ? t('Paisagem aplicada · {l}', { l: p.license || 'licença livre' }) : t('Foto do mês aplicada · {l}', { l: p.license || 'licença livre' })));
-      arts(view, fk, th, txt, tema);
+      arts(view, fk, th, txt, tema, own);
     } catch { toast(t('Não foi possível baixar esta imagem.')); }
   };
   // Galeria grande para escolher com calma
@@ -183,8 +217,8 @@ async function arts(view, fk, th, txt, tema) {
       const b = e.target.closest('[data-pi]'); if (b) usePhoto(list[+b.dataset.pi], modern);
     };
   };
-  if (fk !== 'carousel') landscapePhotos().then((list) => strip('#land', list, true, 16)).catch(() => {});
-  if (fk !== 'carousel') monthPhotos().then((list) => strip('#month', list, false, 10)).catch(() => {});
+  if (fk !== 'carousel' && !own) landscapePhotos().then((list) => strip('#land', list, true, 16)).catch(() => {});
+  if (fk !== 'carousel' && !own) monthPhotos().then((list) => strip('#month', list, false, 10)).catch(() => {});
   const grid = $('#g', view);
   const paintGrid = () => {
     const list = specs();
@@ -194,7 +228,13 @@ async function arts(view, fk, th, txt, tema) {
     grid.onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) postArt(list[+b.dataset.i], { photo: st.photo, wa: !!F.wa }); };
   };
   paintGrid();
+  if (own) {
+    const sw = $('#ownswap', view);
+    if (sw) sw.onchange = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const a = await saveImageBlob(f, { name: f.name || 'minha-foto', source: 'celular' }); sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt, tema, true); } catch (err) { toast(err.message); } };
+  }
   view.onclick = async (e) => {
+    const of = e.target.closest('[data-ownf]'); if (of) return go({ f: of.dataset.ownf, th, foto: '1' });
+    const ot = e.target.closest('[data-ownt]'); if (ot) return go({ f: fk, th: ot.dataset.ownt, foto: '1' });
     if (e.target.closest('#copytema')) { copyText(comp.caption); return toast(t('Texto copiado.')); }
     const ct = e.target.closest('[data-ctype]'); if (ct) { st.ctype = ct.dataset.ctype; sessionStorage.setItem('sk-ctype', st.ctype); $$('#ctype .chip', view).forEach((x) => x.setAttribute('aria-pressed', x === ct)); return paintGrid(); }
     if (e.target.closest('#more')) { st.shift++; sessionStorage.setItem('sk-shift-' + (th || tema || 'txt'), st.shift); paintGrid(); window.scrollTo({ top: grid.offsetTop - 80, behavior: 'smooth' }); return; }
@@ -205,10 +245,10 @@ async function arts(view, fk, th, txt, tema) {
       const id = 'studio-photo-' + sp.dataset.sp;
       try {
         if (!(await db.get('assets', id))) await saveImageBlob(await (await fetch('./assets/photos/' + sp.dataset.sp + '.jpg')).blob(), { id, name: sp.dataset.sp, source: 'studio' });
-        sessionStorage.setItem('sk-photo', id); return arts(view, fk, th, txt, tema);
+        sessionStorage.setItem('sk-photo', id); return arts(view, fk, th, txt, tema, own);
       } catch { return toast(t('Não foi possível baixar esta imagem.')); }
     }
-    if (e.target.closest('[data-add]')) { const a = await chooseImage({ title: t('Sua foto') }); if (a) { sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt, tema); } }
+    if (e.target.closest('[data-add]')) { const a = await chooseImage({ title: t('Sua foto') }); if (a) { sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt, tema, own); } }
   };
 }
 
