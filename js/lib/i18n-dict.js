@@ -995,4 +995,5 @@ export const DICT = {
   "Estilos": { en: "Styles", es: "Estilos" },
   "Novo": { en: "New", es: "Nuevo" },
   "Estilos que param o scroll: revista, aura, conversa, neo-brutal e mais": { en: "Styles that stop the scroll: magazine, aura, chat, neo-brutal and more", es: "Estilos que detienen el scroll: revista, aura, conversación, neobrutal y más" },
+  "12 formatos ousados, sempre com a sua marca.": { en: "12 bold formats, always with your brand.", es: "12 formatos audaces, siempre con tu marca." },
 };
