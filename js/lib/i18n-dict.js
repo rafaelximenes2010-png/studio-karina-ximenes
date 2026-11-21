@@ -996,4 +996,9 @@ export const DICT = {
   "Novo": { en: "New", es: "Nuevo" },
   "Estilos que param o scroll: revista, aura, conversa, neo-brutal e mais": { en: "Styles that stop the scroll: magazine, aura, chat, neo-brutal and more", es: "Estilos que detienen el scroll: revista, aura, conversación, neobrutal y más" },
   "12 formatos ousados, sempre com a sua marca.": { en: "12 bold formats, always with your brand.", es: "12 formatos audaces, siempre con tu marca." },
+  "Novas desta semana": { en: "New this week", es: "Nuevas de esta semana" },
+  "Um lote novo de artes chega toda segunda-feira, automaticamente.": { en: "A new batch of designs arrives every Monday, automatically.", es: "Un nuevo lote de artes llega cada lunes, automáticamente." },
+  "✨ 12 artes novas chegaram nesta semana!": { en: "✨ 12 new designs arrived this week!", es: "✨ ¡Llegaron 12 artes nuevas esta semana!" },
+  "Inédita": { en: "Brand new", es: "Inédita" },
+  "Metade": { en: "Half", es: "Mitad" },
 };

@@ -166,3 +166,13 @@ test('salvamento: flush só grava quando há mudança pendente', async () => {
   d.flush(); assert.deepEqual(calls, ['b'], 'flush repetido não regrava');
   d('c'); await new Promise((r) => setTimeout(r, 80)); assert.deepEqual(calls, ['b', 'c']);
 });
+
+test('Novas desta semana: lote novo toda semana, sem repetir as últimas 4', async () => {
+  const { weeklyArts, weekKey } = await import('../js/lib/weekly.js');
+  const d0 = new Date('2026-11-23T12:00:00'); const ids = (d) => weeklyArts(12, { date: d }).map((a) => a.phraseId);
+  assert.deepEqual(ids(d0), ids(new Date('2026-11-26T09:00:00')), 'mesma semana = mesmo lote');
+  const seen = new Set(ids(d0));
+  for (let k = 1; k <= 4; k++) { const d = new Date(d0); d.setDate(d.getDate() + 7 * k); assert.notEqual(weekKey(d), weekKey(d0)); for (const id of ids(d)) assert.ok(!seen.has(id) || k > 4, `repetiu ${id} na semana +${k}`); ids(d).forEach((x) => seen.add(x)); }
+  const lote = weeklyArts(12, { date: d0 });
+  assert.equal(lote.length, 12); assert.ok(lote.filter((a, i) => i % 2 === 0).every((a) => a.layout && a.week));
+});
