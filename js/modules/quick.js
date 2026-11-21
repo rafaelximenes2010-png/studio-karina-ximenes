@@ -4,7 +4,7 @@ import { t } from '../lib/i18n.js';
 import { db } from '../lib/store.js';
 import { esc, slug } from '../lib/util.js';
 import { PHRASES, captionFor, phraseById } from '../lib/content.js';
-import { PALETTES, COLOR_GROUPS, buildPages, newProjectFromSpec } from '../lib/templates.js';
+import { PALETTES, COLOR_GROUPS, buildPages, newProjectFromSpec, STYLES, VANGUARDA } from '../lib/templates.js';
 import { I, $, $$, sheet, toast, zoomPages, drawThumb, exportPage, ensureFonts, measureCtx, signature, downloadBlob, copyText, assetImage } from '../ui.js';
 import { chooseImage, saveImageBlob } from './media.js';
 import { monthPhotos, landscapePhotos } from './photos.js';
@@ -45,6 +45,7 @@ export async function render(view, { query }) {
   const fk = QFORMATS[query.get('f')] ? query.get('f') : (query.get('f') === 'portrait' ? 'feed' : null);
   const th = query.get('th'); const txt = query.get('txt'); const tema = query.get('tema');
   if (query.get('foto') === '1' && fk) return arts(view, fk, th || 'mix', txt, tema, true);
+  if (query.get('vg') === '1') return arts(view, fk || 'story', th || 'mix', txt, tema, false, true);
   if (!fk) return formats(view);
   if (!th && !txt && !tema) return themes(view, fk);
   return arts(view, fk, th, txt, tema);
@@ -68,6 +69,7 @@ function formats(view) {
     <div class="qmain" id="fmts">${big.map(([k, ic, l, sub]) => k === 'foto'
       ? `<label class="qbig photo" data-big="foto"><input type="file" accept="image/*" id="myph" hidden><span class="ic">${ic}</span><b>${t(l)}</b><small>${t(sub)}</small></label>`
       : `<button class="qbig" data-fmt="${k}"><span class="ic">${ic}</span><b>${t(l)}</b><small>${t(sub)}</small></button>`).join('')}</div>
+    <a class="vg-banner" href="#/rapido?f=story&th=mix&vg=1" style="margin-top:12px"><span class="vg-tag">✦ ${t('Novo')}</span><b>${t('Vanguarda')}</b><small>${t('Estilos que param o scroll: revista, aura, conversa, neo-brutal e mais')}</small><i>→</i></a>
     <div class="qgroup" style="margin-top:16px">${t('Mais formatos')}</div>
     <div class="chips" id="fmts2"><button class="chip ic" data-fmt="status">${I.chat}${t('Status do WhatsApp')}</button><button class="chip ic" data-fmt="square">${I.square}${t('Quadrado 1:1')}</button><button class="chip ic" data-fmt="feed" data-th="ladoalado">${I.scale}${t('Lado a lado')}</button></div>
     <h2 class="h-section" style="font-size:20px">${t('Outras formas de criar')}</h2>
@@ -107,15 +109,16 @@ function themes(view, fk) {
   $('#gotxt', view).onclick = () => { const v = $('#own', view).value.trim(); if (!v) return toast(t('Escreva sua frase.')); go({ f: fk, txt: v.slice(0, 280) }); };
 }
 
-async function arts(view, fk, th, txt, tema, own = false) {
+async function arts(view, fk, th, txt, tema, own = false, vg = false) {
   await ensureFonts();
   const F = QFORMATS[fk]; const fmt = F.render;
   const st = { colors: sessionStorage.getItem('sk-colors') || 'todas', photo: sessionStorage.getItem('sk-photo') || null, shift: +(sessionStorage.getItem('sk-shift-' + (th || tema || 'txt')) || 0) };
-  const N = fk === 'carousel' ? 4 : fmt === 'portrait' ? 6 : 9;
+  const N = vg ? 12 : fk === 'carousel' ? 4 : fmt === 'portrait' ? 6 : 9;
   const palsOf = () => COLOR_GROUPS[st.colors]?.keys || PALS;
   const themeLabel = th ? GROUPS.flatMap(([, it]) => it).find(([id]) => id === th)?.[1] : null;
   const comp = tema ? composeFromTheme(tema) : th && th !== 'minhas' && themeLabel ? composeFromTheme(themeLabel, { cat: th }) : null;
   st.ctype = sessionStorage.getItem('sk-ctype') || 'frases';
+  st.style = sessionStorage.getItem('sk-style') || '';
   const specs = () => {
     const ks = palsOf();
     const pal = (i, k = 5) => ks[(st.shift * k + i * 3) % ks.length];
@@ -147,29 +150,32 @@ async function arts(view, fk, th, txt, tema, own = false) {
       });
     }
     const modern = st.photo && st.photo === sessionStorage.getItem('sk-paisagem');
-    const lays = modern ? MODERN_LAY : own && st.photo ? OWN_LAY : st.photo ? PHOTO_LAY : LAY[fmt];
+    const lays = vg ? VANGUARDA : modern ? MODERN_LAY : own && st.photo ? OWN_LAY : st.photo ? PHOTO_LAY : LAY[fmt];
     let list;
     if (txt) list = Array.from({ length: N }, () => ({ id: 'custom', cat: 'minhas', text: txt }));
     else if (tema) list = Array.from({ length: N }, (_, i) => comp.phrases[(st.shift * N + i) % comp.phrases.length]);
     else { const all = PHRASES.filter((p) => (th === 'minhas' ? p.custom : th === 'mix' ? MIX.includes(p.cat) || p.custom : p.cat === th) && (fmt !== 'story' || !p.items) && (th !== 'mix' || !p.items)); list = Array.from({ length: N }, (_, i) => all[(st.shift * N + i) % all.length]); }
     return list.filter(Boolean).map((p, i) => ({
       ...(p.id === 'custom' || p.generated ? { phrase: p } : { phraseId: p.id }),
-      layout: p.items && st.photo ? 'fotolista' : p.items ? (i % 2 ? 'cartaolista' : 'lista') : lays[(st.shift * 3 + i) % lays.length],
+      layout: vg ? lays[(st.shift * 5 + i) % lays.length] : p.items && st.photo ? 'fotolista' : p.items ? (i % 2 ? 'cartaolista' : 'lista') : lays[(st.shift * 3 + i) % lays.length],
       palette: pal(i), format: fmt, caption: tema ? comp.caption : undefined,
     }));
   };
   const mine = (await db.all('assets')).slice(0, 12);
   const label = txt ? t('Sua frase') : tema ? comp.theme : th === 'mix' ? t('Minha foto') : t(themeLabel || '');
+  const modeChips = (key) => `<div class="chips" id="ownfmt">${[['story', I.story + 'Story'], ['feed', I.feed + 'Feed'], ['status', I.chat + 'Status'], ['square', I.square + t('Quadrado')]].map(([k, l]) => `<button class="chip ic" data-ownf="${k}" aria-pressed="${fk === k}">${l}</button>`).join('')}</div>
+    <div class="chips" id="ownth" style="margin-top:6px">${[['mix', I.sparkle + t('Variado')], ['espiritualidade', I.cross + t('Fé')], ['logoterapia', I.compass + t('Sentido')], ['emocional', I.leaf + t('Cuidado')], ['relacoes', I.users + t('Relações')], ...(PHRASES.some((p) => p.custom) ? [['minhas', I.feather + t('Minhas')]] : [])].map(([k, l]) => `<button class="chip ic" data-ownt="${k}" aria-pressed="${th === k}">${l}</button>`).join('')}</div>`;
+  const vgBlock = vg ? `<section class="vg-hero"><span class="vg-tag">✦ ${t('Vanguarda')}</span><h1>${t('Estilos que param o scroll')}</h1><p>${t('Revista, aura, conversa, neo-brutal, bloco de notas, polaroid… 12 formatos ousados, sempre com a sua marca.')}</p></section>${modeChips()}` : '';
   const ownBlock = own ? `<div class="own-head">
       <img data-asset="${st.photo || ''}" alt="" class="own-ph">
       <div class="grow"><b>${t('Sua foto já está nas artes')}</b><small>${t('Escolha o formato e o assunto, ou toque numa arte para postar.')}</small>
         <label class="btn sm secondary" style="margin-top:8px">${I.image}${t('Trocar foto')}<input type="file" accept="image/*" id="ownswap" hidden></label></div></div>
-    <div class="chips" id="ownfmt">${[['story', I.story + 'Story'], ['feed', I.feed + 'Feed'], ['status', I.chat + 'Status'], ['square', I.square + t('Quadrado')]].map(([k, l]) => `<button class="chip ic" data-ownf="${k}" aria-pressed="${fk === k}">${l}</button>`).join('')}</div>
-    <div class="chips" id="ownth" style="margin-top:6px">${[['mix', I.sparkle + t('Variado')], ['espiritualidade', I.cross + t('Fé')], ['logoterapia', I.compass + t('Sentido')], ['emocional', I.leaf + t('Cuidado')], ['relacoes', I.users + t('Relações')], ...(PHRASES.some((p) => p.custom) ? [['minhas', I.feather + t('Minhas')]] : [])].map(([k, l]) => `<button class="chip ic" data-ownt="${k}" aria-pressed="${th === k}">${l}</button>`).join('')}</div>` : '';
+    ${modeChips()}` : '';
   view.innerHTML = `
-    <div class="eyebrow">${own ? `📷 ${t('Da minha foto')} · ${t(F.label)}` : `${t(F.label)} · ${esc(label)} · ${t('passo')} 3 ${t('de')} 3`}</div>
+    ${vg ? vgBlock : `<div class="eyebrow">${own ? `${t('Da minha foto')} · ${t(F.label)}` : `${t(F.label)} · ${esc(label)} · ${t('passo')} 3 ${t('de')} 3`}</div>
     <h1 class="h-title" style="margin:4px 0 2px">${t('Escolha uma arte')}</h1>
-    <p class="small muted" style="margin:0 0 10px">${t('Toque na arte para ver grande e postar.')}</p>
+    <p class="small muted" style="margin:0 0 10px">${t('Toque na arte para ver grande e postar.')}</p>`}
+    ${fk === 'carousel' ? '' : `<div class="qgroup" style="margin-top:10px">✦ ${t('Estilos')}</div><div class="styles" id="styles"><button data-style="" aria-pressed="${!st.style}"><canvas></canvas><span>${t('Original')}</span></button>${STYLES.map((x) => `<button data-style="${x.id}" aria-pressed="${st.style === x.id}"><canvas></canvas><span>${t(x.label)}</span></button>`).join('')}</div>`}
     ${fk === 'carousel' ? `<div class="qgroup" style="margin-top:6px">🗂️ ${t('Tipo de carrossel')}</div>
     <div class="chips" id="ctype">${[['frases', I.quote + t('Frases do tema')], ['dicas', I.list + t('Dicas passo a passo')], ['perguntas', I.help + t('Perguntas para refletir')]].map(([k, l]) => `<button class="chip ic" data-ctype="${k}" aria-pressed="${st.ctype === k}">${l}</button>`).join('')}</div>` : ''}
     ${tema ? `<details class="fold" style="margin:8px 0"><summary>✨ ${t('Texto pronto sobre')} ${esc(comp.theme)}</summary><div><div class="result small">${esc(comp.caption)}</div><button class="btn sm ghost" id="copytema" style="margin-top:8px">${I.copy}${t('Copiar texto')}</button></div></details>` : ''}
@@ -198,7 +204,7 @@ async function arts(view, fk, th, txt, tema, own = false) {
       const a = await saveImageBlob(await (await fetch(p.full)).blob(), { name: p.title, source: 'wikimedia', license: p.license, author: p.author, url: p.page });
       sessionStorage.setItem('sk-photo', a.id); modern ? sessionStorage.setItem('sk-paisagem', a.id) : sessionStorage.removeItem('sk-paisagem');
       toast((modern ? t('Paisagem aplicada · {l}', { l: p.license || 'licença livre' }) : t('Foto do mês aplicada · {l}', { l: p.license || 'licença livre' })));
-      arts(view, fk, th, txt, tema, own);
+      arts(view, fk, th, txt, tema, own, vg);
     } catch { toast(t('Não foi possível baixar esta imagem.')); }
   };
   // Galeria grande para escolher com calma
@@ -224,20 +230,28 @@ async function arts(view, fk, th, txt, tema, own = false) {
   if (fk !== 'carousel' && !own) monthPhotos().then((list) => strip('#month', list, false, 10)).catch(() => {});
   const grid = $('#g', view);
   const paintGrid = () => {
-    const list = specs();
+    const list = specs().map((sp) => (st.style ? { ...sp, style: st.style } : sp));
     grid.innerHTML = list.map((_, i) => `<button class="art" data-i="${i}" aria-label="${t('Arte')} ${i + 1}">${fk === 'carousel' ? `<span class="pill">${t('Carrossel')}</span>` : ''}<canvas></canvas></button>`).join('');
     const cs = $$('canvas', grid);
     list.forEach((sp, i) => { const pg = pagesOf(sp, st.photo)[0]; drawThumb(cs[i], pg, sp.format, 420); });
     grid.onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) postArt(list[+b.dataset.i], { photo: st.photo, wa: !!F.wa }); };
   };
   paintGrid();
+  const sbox = $('#styles', view);
+  if (sbox) {
+    const base = specs()[0];
+    if (base) for (const b of $$('[data-style]', sbox)) { const sp = b.dataset.style ? { ...base, style: b.dataset.style } : base; drawThumb($('canvas', b), pagesOf(sp, st.photo)[0], sp.format, 160); }
+  }
   if (own) {
     const sw = $('#ownswap', view);
-    if (sw) sw.onchange = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const a = await saveImageBlob(f, { name: f.name || 'minha-foto', source: 'celular' }); sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt, tema, true); } catch (err) { toast(err.message); } };
+    if (sw) sw.onchange = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const a = await saveImageBlob(f, { name: f.name || 'minha-foto', source: 'celular' }); sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt, tema, true, vg); } catch (err) { toast(err.message); } };
   }
   view.onclick = async (e) => {
-    const of = e.target.closest('[data-ownf]'); if (of) return go({ f: of.dataset.ownf, th, foto: '1' });
-    const ot = e.target.closest('[data-ownt]'); if (ot) return go({ f: fk, th: ot.dataset.ownt, foto: '1' });
+    const mode = vg ? { vg: '1' } : { foto: '1' };
+    const of = e.target.closest('[data-ownf]'); if (of) return go({ f: of.dataset.ownf, th, ...mode });
+    const ot = e.target.closest('[data-ownt]'); if (ot) return go({ f: fk, th: ot.dataset.ownt, ...mode });
+    const sb = e.target.closest('[data-style]');
+    if (sb) { st.style = sb.dataset.style; sessionStorage.setItem('sk-style', st.style); $$('#styles [data-style]', view).forEach((x) => x.setAttribute('aria-pressed', x === sb)); return paintGrid(); }
     if (e.target.closest('#copytema')) { copyText(comp.caption); return toast(t('Texto copiado.')); }
     const ct = e.target.closest('[data-ctype]'); if (ct) { st.ctype = ct.dataset.ctype; sessionStorage.setItem('sk-ctype', st.ctype); $$('#ctype .chip', view).forEach((x) => x.setAttribute('aria-pressed', x === ct)); return paintGrid(); }
     if (e.target.closest('#more')) { st.shift++; sessionStorage.setItem('sk-shift-' + (th || tema || 'txt'), st.shift); paintGrid(); window.scrollTo({ top: grid.offsetTop - 80, behavior: 'smooth' }); return; }
@@ -248,10 +262,10 @@ async function arts(view, fk, th, txt, tema, own = false) {
       const id = 'studio-photo-' + sp.dataset.sp;
       try {
         if (!(await db.get('assets', id))) await saveImageBlob(await (await fetch('./assets/photos/' + sp.dataset.sp + '.jpg')).blob(), { id, name: sp.dataset.sp, source: 'studio' });
-        sessionStorage.setItem('sk-photo', id); return arts(view, fk, th, txt, tema, own);
+        sessionStorage.setItem('sk-photo', id); return arts(view, fk, th, txt, tema, own, vg);
       } catch { return toast(t('Não foi possível baixar esta imagem.')); }
     }
-    if (e.target.closest('[data-add]')) { const a = await chooseImage({ title: t('Sua foto') }); if (a) { sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt, tema, own); } }
+    if (e.target.closest('[data-add]')) { const a = await chooseImage({ title: t('Sua foto') }); if (a) { sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt, tema, own, vg); } }
   };
 }
 
