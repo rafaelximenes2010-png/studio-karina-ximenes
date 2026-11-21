@@ -88,7 +88,9 @@ await step('Da minha foto em 3 toques; lado a lado; 4 opções no passo 1', asyn
   return `4 opções (${opts.join(', ')}); foto própria → ${n} artes prontas, troca de formato ok; lado a lado: ${m} artes`;
 });
 await step('Vanguarda: 12 layouts ousados e estilos tipo filtro', async () => {
-  await go('#/'); await page.click('.vg-banner'); await page.waitForSelector('.vg-hero'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(2500);
+  await go('#/'); const wk = await page.locator('#weekly .art').count(); if (wk !== 12) throw new Error('novas da semana: ' + wk);
+  await page.locator('#weekly').scrollIntoViewIfNeeded(); await page.waitForTimeout(1500); await shot('03n-novas-da-semana');
+  await page.click('.vg-banner'); await page.waitForSelector('.vg-hero'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(2500);
   await shot('03l-vanguarda');
   const n = await page.locator('#g [data-i]').count(); if (n !== 12) throw new Error('artes: ' + n);
   const styles = await page.locator('#styles [data-style]').count(); if (styles < 15) throw new Error('estilos: ' + styles);

@@ -23,7 +23,7 @@ export const PALETTES = {
 
 export const LAYOUTS = {
   minimal: 'Minimalista', editorial: 'Editorial', aspas: 'Citação', moldura: 'Moldura', dividido: 'Dividido',
-  arco: 'Arco', foto: 'Fotográfico', fotoarco: 'Foto em arco', fotocirculo: 'Retrato circular', fotofaixa: 'Foto panorâmica', fotolista: 'Lista com foto', revista: 'Revista', gigante: 'Palavra gigante', notas: 'Bloco de notas', postcard: 'Post', aura: 'Aura', marcatexto: 'Marca-texto', recibo: 'Receita do dia', conversa: 'Conversa', brutal: 'Neo-brutal', polaroid: 'Polaroid', dividido: 'Dividido', manuscrito: 'Manuscrito', comparativo: 'Lado a lado', paisagem: 'Paisagem moderna', paisagemcentro: 'Paisagem com cartão', tipografico: 'Tipográfico', cartao: 'Cartão',
+  arco: 'Arco', foto: 'Fotográfico', fotoarco: 'Foto em arco', fotocirculo: 'Retrato circular', fotofaixa: 'Foto panorâmica', fotolista: 'Lista com foto', revista: 'Revista', gigante: 'Palavra gigante', notas: 'Bloco de notas', postcard: 'Post', aura: 'Aura', marcatexto: 'Marca-texto', recibo: 'Receita do dia', conversa: 'Conversa', brutal: 'Neo-brutal', polaroid: 'Polaroid', metade: 'Metade', manuscrito: 'Manuscrito', comparativo: 'Lado a lado', paisagem: 'Paisagem moderna', paisagemcentro: 'Paisagem com cartão', tipografico: 'Tipográfico', cartao: 'Cartão',
   circulo: 'Círculo', folhas: 'Botânico', campanha: 'Campanha', institucional: 'Institucional', lista: 'Lista', cartaolista: 'Lista em cartão',
 };
 const TEXT_LAYOUTS = ['minimal', 'editorial', 'aspas', 'moldura', 'dividido', 'arco', 'foto', 'fotoarco', 'tipografico', 'cartao', 'circulo', 'folhas', 'campanha', 'institucional'];
@@ -46,7 +46,7 @@ export const STYLES = [
   { id: 'noite', label: 'Noite', palette: 'floresta', filter: 'noite', font: 'sans' },
   { id: 'maquina', label: 'Máquina', palette: 'creme', filter: 'film', font: 'mono' },
 ];
-export const VANGUARDA = ['revista', 'gigante', 'aura', 'marcatexto', 'conversa', 'brutal', 'notas', 'postcard', 'polaroid', 'recibo', 'dividido', 'manuscrito'];
+export const VANGUARDA = ['revista', 'gigante', 'aura', 'marcatexto', 'conversa', 'brutal', 'notas', 'postcard', 'polaroid', 'recibo', 'metade', 'manuscrito'];
 // Ajusta o tamanho para uma linha caber na largura (mede de verdade quando há contexto de medida)
 function fitOneLine(l, maxW, mctx) {
   if (!mctx) return l;
@@ -371,7 +371,7 @@ const L = {
       { ...t, rot: -3 }, ...footer(F, pal, o.sig, 'left')];
   },
   // Dividido: metade cor, metade frase
-  dividido(p, pal, F, o) {
+  metade(p, pal, F, o) {
     const { W, H, m } = F; const top = H * 0.42; const ink = pal.ink;
     const key = T('“', 0, top * 0.18, W, Math.round(W * 0.5), { weight: 600, color: '#FFFFFF', lh: 1 });
     const t = T(p.text, m, 0, W - m * 2, 58, { weight: 600, color: ink, lh: 1.18 });

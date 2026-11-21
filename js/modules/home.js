@@ -3,8 +3,9 @@ import { db, prefs } from '../lib/store.js';
 import { esc, isoDate, fmtDate } from '../lib/util.js';
 import { PHRASES, CATEGORIES } from '../lib/content.js';
 import { allArts } from '../lib/templates.js';
-import { I, artCard, sheet, $, $$, lazyThumbs, drawSpecThumb, statusLabel } from '../ui.js';
+import { I, artCard, sheet, $, $$, lazyThumbs, drawSpecThumb, statusLabel, toast } from '../ui.js';
 import { openSpec, projectList, projectStrip, docStrip, wireProjectThumbs } from './shared.js';
+import { weeklyArts, weekKey, frankieWeekly } from '../lib/weekly.js';
 
 function greeting() {
   const h = new Date().getHours();
@@ -54,6 +55,10 @@ export async function render(view) {
     <div class="kpi"><b>${projects.length}</b><span>${t('projetos seus')}</span></div>
   </div>
 
+  <h2 class="h-section">${t('Novas desta semana')}<a href="#/biblioteca">${t('Mais')} →</a></h2>
+  <p class="xs muted" style="margin:-6px 0 8px">✦ ${t('Um lote novo de artes chega toda segunda-feira, automaticamente.')}</p>
+  <div class="hscroll" id="weekly">${weeklyArts(12).map((a, i) => artCard(a, { title: i % 2 === 0 ? t('Vanguarda') : t('Clássico'), pill: i < 2 ? t('Novo') : '' })).join('')}</div>
+
   <h2 class="h-section">${t('Sugestões do dia')}<a href="#/biblioteca">${t('Ver todas')} →</a></h2>
   <div class="hscroll">${daily.map((a) => artCard({ phraseId: a.phraseId, layout: a.layout, palette: a.palette, format: 'portrait' }, { title: CATEGORIES.find((c) => c.id === a.cat)?.label })).join('')}</div>
 
@@ -64,6 +69,18 @@ export async function render(view) {
   <p class="xs muted" style="text-align:center;margin-top:32px">Karina Ximenes · Psicóloga — Pessoas • Histórias • Recomeços</p>`;
 
   wireProjectThumbs(view, projects.slice(0, 10));
+  // Aviso de lote novo (1x por semana) e frases inéditas do Frankie (IA) quando ligado
+  try {
+    const wk = weekKey();
+    if (localStorage.getItem('sk-ultima-semana') && localStorage.getItem('sk-ultima-semana') !== wk) setTimeout(() => toast(t('✨ 12 artes novas chegaram nesta semana!'), 4500), 1200);
+    localStorage.setItem('sk-ultima-semana', wk);
+  } catch { /* armazenamento indisponível */ }
+  import('./ai.js').then(async (ai) => {
+    const ok = !!(await ai.aiEndpoint()) && !!prefs.get().aiCode;
+    const extra = await frankieWeekly(ai.callAI, ok);
+    const box = $('#weekly', view);
+    if (extra.length && box?.isConnected) { box.innerHTML = weeklyArts(12, { extra }).map((a, i) => artCard(a, { title: a.phrase?.frankie ? 'Frankie' : i % 2 === 0 ? t('Vanguarda') : t('Clássico'), pill: a.phrase?.frankie ? t('Inédita') : '' })).join(''); lazyThumbs(box, (c) => drawSpecThumb(c)); }
+  }).catch(() => {});
   $('#homeph', view).onchange = async (e) => (await import('./quick.js')).startFromPhoto(e.target.files?.[0]);
   view.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-art]'); if (!b) return;
