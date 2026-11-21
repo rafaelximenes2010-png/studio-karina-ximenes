@@ -23,7 +23,7 @@ export async function render(view) {
   const counts = { total: posts.length, ap: posts.filter((x) => x.status === 'aprovado' || x.status === 'publicado').length };
 
   view.innerHTML = `
-  <section class="hero">
+  <section class="hero centered">
     <div class="eyebrow">${t('Estúdio criativo · identidade & conteúdo')}</div>
     <h1 class="h-display">${greeting()}, ${esc(p.name || 'Karina')}.</h1>
     <p class="muted" style="max-width:520px;margin:0 0 18px">${t('Ideias que acolhem. Conteúdos que transformam. Tudo com a sua identidade visual.')}</p>

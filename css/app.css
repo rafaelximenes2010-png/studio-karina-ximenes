@@ -464,3 +464,12 @@ canvas.tap-zoom { cursor: zoom-in; }
 .chip.ic svg { width: 18px; height: 18px; flex: none; }
 .hq span { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: #ffffff1f; font-size: 0; }
 .hq span svg { width: 22px; height: 22px; }
+/* Início centralizado */
+.hero.centered { text-align: center; padding: 28px 18px 22px; }
+.hero.centered .eyebrow { line-height: 1.6; }
+.hero.centered p.muted { margin-left: auto !important; margin-right: auto !important; max-width: 340px !important; }
+.hero.centered .hero-quick { margin: 0 auto; width: 100%; max-width: 420px; }
+.hero.centered .hq { flex-direction: column; justify-content: center; gap: 8px; min-height: 96px; text-align: center; padding: 14px 8px; }
+.hero.centered .hq b { font-size: 16px; }
+.hero.centered .row { justify-content: center; flex-wrap: wrap; gap: 8px; }
+.hero.centered::after { right: -140px; top: -150px; }
