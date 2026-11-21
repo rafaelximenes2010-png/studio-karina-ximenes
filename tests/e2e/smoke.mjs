@@ -70,6 +70,21 @@ await step('Criar rápido: Story → tema → arte → postar (3 toques)', async
   await go('#/rapido?f=feed'); await page.fill('#own', 'Recomeçar também é um ato de fé.'); await page.click('#gotxt'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(1200); await shot('03c-rapido-minha-frase');
   return `Story ${w}×${h} pronto para o Instagram; Feed com frase própria: ${await page.locator('#g [data-i]').count()} opções`;
 });
+await step('Da minha foto em 3 toques; lado a lado; 4 opções no passo 1', async () => {
+  await go('#/rapido'); await page.waitForSelector('.qmain .qbig');
+  const opts = await page.$$eval('.qmain .qbig b', (b) => b.map((x) => x.textContent));
+  if (opts.join('|') !== 'Story|Feed|Da minha foto|Carrossel') throw new Error('opções: ' + opts.join('|'));
+  await shot('03i-passo1-quatro-opcoes');
+  await page.setInputFiles('#myph', 'assets/photos/trilha.jpg');
+  await page.waitForFunction(() => location.hash.includes('foto=1'), null, { timeout: 15000 });
+  await page.waitForSelector('#g canvas'); await page.waitForTimeout(1500); await shot('03j-da-minha-foto');
+  const n = await page.locator('#g [data-i]').count(); if (n < 6) throw new Error('poucas artes: ' + n);
+  await page.click('[data-ownf=feed]'); await page.waitForFunction(() => location.hash.includes('f=feed') && location.hash.includes('foto=1'));
+  await page.waitForSelector('#g canvas'); await page.locator('#g [data-i]').first().click(); await page.waitForSelector('#ig:not([disabled])', { timeout: 20000 }); await closeSheets();
+  await go('#/rapido?f=feed&th=ladoalado'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(1500); await shot('03k-lado-a-lado');
+  const m = await page.locator('#g [data-i]').count();
+  return `4 opções (${opts.join(', ')}); foto própria → ${n} artes prontas, troca de formato ok; lado a lado: ${m} artes`;
+});
 await step('Tema livre gera frases e texto; tipos de carrossel', async () => {
   await go('#/rapido?f=story'); await page.fill('#tema', 'luto'); await page.click('#gotema');
   await page.waitForSelector('#g canvas'); await page.waitForTimeout(1500); await shot('03f-tema-luto');

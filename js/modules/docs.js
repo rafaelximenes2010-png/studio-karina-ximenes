@@ -6,6 +6,7 @@ import { esc, uid, fmtDate, debounce, slug } from '../lib/util.js';
 import { formatRef, sortRefs, plain, toHTML, inText } from '../lib/cite.js';
 import { buildDocx } from '../lib/docx.js';
 import { I, $, $$, sheet, toast, confirmDialog, downloadBlob, assetImage, refresh, logoSrc } from '../ui.js';
+import { docCover } from './shared.js';
 import { chooseImage } from './media.js';
 
 const KINDS = {
@@ -29,7 +30,7 @@ const LOOK = {
   guia: ['#5F8A72', 'Para quem é, passo a passo e dicas'],
   ebook: ['#8C6239', 'Capa, capítulos e citações'],
 };
-const cover = (k, label) => `<span class="doc-cover" style="--c:${LOOK[k]?.[0] || '#435B49'}" aria-hidden="true"><i class="band"></i><img src="${logoSrc}" alt=""><b>${esc(label)}</b><i class="ln"></i><i class="ln s"></i><i class="ln"></i><i class="ln s"></i></span>`;
+const cover = (k, label) => docCover(k, label);
 const BLOCKS = { h1: 'Título', h2: 'Subtítulo', h3: 'Tópico', p: 'Parágrafo', list: 'Lista', olist: 'Lista numerada', quote: 'Citação longa', note: 'Nota/destaque', table: 'Tabela', image: 'Imagem', pagebreak: 'Quebra de página' };
 
 export async function render(view, params) {

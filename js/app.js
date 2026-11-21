@@ -65,7 +65,8 @@ async function route() {
     view.focus({ preventScroll: true });
   } catch (e) {
     console.error(e);
-    $('#view').innerHTML = `<div class="empty"><p><b>${t('Algo não saiu como esperado.')}</b></p><p class="small">${String(e.message || e).replace(/[<>&]/g, '')}</p><button class="btn" onclick="location.reload()">${t('Recarregar')}</button></div>`;
+    $('#view').innerHTML = `<div class="empty"><p><b>${t('Algo não saiu como esperado.')}</b></p><p class="small">${String(e.message || e).replace(/[<>&]/g, '')}</p><button class="btn" id="reload-app">${t('Recarregar')}</button></div>`;
+    document.getElementById('reload-app')?.addEventListener('click', () => location.reload());
   }
 }
 
