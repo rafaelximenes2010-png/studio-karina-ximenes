@@ -165,7 +165,7 @@ async function arts(view, fk, th, txt, tema, own = false, vg = false) {
   const label = txt ? t('Sua frase') : tema ? comp.theme : th === 'mix' ? t('Minha foto') : t(themeLabel || '');
   const modeChips = (key) => `<div class="chips" id="ownfmt">${[['story', I.story + 'Story'], ['feed', I.feed + 'Feed'], ['status', I.chat + 'Status'], ['square', I.square + t('Quadrado')]].map(([k, l]) => `<button class="chip ic" data-ownf="${k}" aria-pressed="${fk === k}">${l}</button>`).join('')}</div>
     <div class="chips" id="ownth" style="margin-top:6px">${[['mix', I.sparkle + t('Variado')], ['espiritualidade', I.cross + t('Fé')], ['logoterapia', I.compass + t('Sentido')], ['emocional', I.leaf + t('Cuidado')], ['relacoes', I.users + t('Relações')], ...(PHRASES.some((p) => p.custom) ? [['minhas', I.feather + t('Minhas')]] : [])].map(([k, l]) => `<button class="chip ic" data-ownt="${k}" aria-pressed="${th === k}">${l}</button>`).join('')}</div>`;
-  const vgBlock = vg ? `<section class="vg-hero"><span class="vg-tag">✦ ${t('Vanguarda')}</span><h1>${t('Estilos que param o scroll')}</h1><p>${t('Revista, aura, conversa, neo-brutal, bloco de notas, polaroid… 12 formatos ousados, sempre com a sua marca.')}</p></section>${modeChips()}` : '';
+  const vgBlock = vg ? `<section class="vg-hero"><div><span class="vg-tag">✦ ${t('Vanguarda')}</span><h1>${t('Estilos que param o scroll')}</h1><p>${t('12 formatos ousados, sempre com a sua marca.')}</p></div><span class="vg-num">12</span></section>${modeChips()}` : '';
   const ownBlock = own ? `<div class="own-head">
       <img data-asset="${st.photo || ''}" alt="" class="own-ph">
       <div class="grow"><b>${t('Sua foto já está nas artes')}</b><small>${t('Escolha o formato e o assunto, ou toque numa arte para postar.')}</small>
@@ -180,7 +180,7 @@ async function arts(view, fk, th, txt, tema, own = false, vg = false) {
     <div class="chips" id="ctype">${[['frases', I.quote + t('Frases do tema')], ['dicas', I.list + t('Dicas passo a passo')], ['perguntas', I.help + t('Perguntas para refletir')]].map(([k, l]) => `<button class="chip ic" data-ctype="${k}" aria-pressed="${st.ctype === k}">${l}</button>`).join('')}</div>` : ''}
     ${tema ? `<details class="fold" style="margin:8px 0"><summary>✨ ${t('Texto pronto sobre')} ${esc(comp.theme)}</summary><div><div class="result small">${esc(comp.caption)}</div><button class="btn sm ghost" id="copytema" style="margin-top:8px">${I.copy}${t('Copiar texto')}</button></div></details>` : ''}
     ${ownBlock}
-    ${fk === 'carousel' || own ? '' : `<div class="qgroup" style="margin-top:6px">🏞️ ${t('Paisagens reais · posts modernos')}</div>
+    ${fk === 'carousel' || own || vg ? '' : `<div class="qgroup" style="margin-top:6px">🏞️ ${t('Paisagens reais · posts modernos')}</div>
     <div class="qphotos" id="land"><span class="xs muted" style="align-self:center">${t('Carregando paisagens...')}</span></div>`}
     ${fk === 'carousel' || own ? '' : `<div class="qgroup" style="margin-top:6px">📷 ${t('Foto (opcional)')}</div>
     <div class="qphotos" id="ph">
@@ -226,7 +226,7 @@ async function arts(view, fk, th, txt, tema, own = false, vg = false) {
       const b = e.target.closest('[data-pi]'); if (b) usePhoto(list[+b.dataset.pi], modern);
     };
   };
-  if (fk !== 'carousel' && !own) landscapePhotos().then((list) => strip('#land', list, true, 16)).catch(() => {});
+  if (fk !== 'carousel' && !own && !vg) landscapePhotos().then((list) => strip('#land', list, true, 16)).catch(() => {});
   if (fk !== 'carousel' && !own) monthPhotos().then((list) => strip('#month', list, false, 10)).catch(() => {});
   const grid = $('#g', view);
   const paintGrid = () => {
