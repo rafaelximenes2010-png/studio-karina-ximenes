@@ -21,10 +21,10 @@ export const QFORMATS = {
 };
 // Assuntos organizados em grupos
 const GROUPS = [
-  ['Fé e sentido', [['logoterapia', 'Sentido da vida', 'Logoterapia e Viktor Frankl', '🌱', '#E6EDE3'], ['espiritualidade', 'Fé e esperança', 'Graça, providência e recomeços', '✝️', '#EFE3CF']]],
-  ['Cuidado emocional', [['emocional', 'Emoções e autocuidado', 'Ansiedade, limites, descanso', '💛', '#FBE7A1'], ['reflexoes', 'Reflexão do dia', 'Frases curtas para acolher', '☀️', '#FFF2CC'], ['relacoes', 'Relacionamentos', 'Família, amor e vínculos', '🤝', '#E9DEF7']]],
-  ['Terapia e ciência', [['emdr', 'EMDR e trauma', 'Como funciona, o que esperar', '🧠', '#E9DEF7'], ['neuro', 'Cérebro e hábitos', 'Neurociência do dia a dia', '✨', '#E6EDE3'], ['ladoalado', 'Lado a lado', 'O que faz bem × o que faz mal', '⚖️', '#E8F0E1'], ['psicoeducacao', 'Dicas em lista', 'Passo a passo e sinais de alerta', '📝', '#F6E5CE']]],
-  ['Seu trabalho e datas', [['datas', 'Campanhas do mês', 'Janeiro Branco, Setembro Amarelo…', '📅', '#F6E5CE'], ['divulgacao', 'Meu trabalho', 'Atendimento, abordagens, agenda', '💼', '#EEE7DA'], ['minhas', 'Minhas reflexões', 'As frases que você escreveu', '🕊️', '#F7F1FF']]],
+  ['Fé e sentido', [['logoterapia', 'Sentido da vida', 'Logoterapia e Viktor Frankl', I.compass, '#E6EDE3'], ['espiritualidade', 'Fé e esperança', 'Graça, providência e recomeços', I.cross, '#EFE3CF']]],
+  ['Cuidado emocional', [['emocional', 'Emoções e autocuidado', 'Ansiedade, limites, descanso', I.heart, '#FBE7A1'], ['reflexoes', 'Reflexão do dia', 'Frases curtas para acolher', I.sun, '#FFF2CC'], ['relacoes', 'Relacionamentos', 'Família, amor e vínculos', I.users, '#E9DEF7']]],
+  ['Terapia e ciência', [['emdr', 'EMDR e trauma', 'Como funciona, o que esperar', I.brain, '#E9DEF7'], ['neuro', 'Cérebro e hábitos', 'Neurociência do dia a dia', I.sparkle, '#E6EDE3'], ['ladoalado', 'Lado a lado', 'O que faz bem × o que faz mal', I.scale, '#E8F0E1'], ['psicoeducacao', 'Dicas em lista', 'Passo a passo e sinais de alerta', I.list, '#F6E5CE']]],
+  ['Seu trabalho e datas', [['datas', 'Campanhas do mês', 'Janeiro Branco, Setembro Amarelo…', I.calendar, '#F6E5CE'], ['divulgacao', 'Meu trabalho', 'Atendimento, abordagens, agenda', I.briefcase, '#EEE7DA'], ['minhas', 'Minhas reflexões', 'As frases que você escreveu', I.feather, '#F7F1FF']]],
 ];
 const LAY = {
   story: ['minimal', 'aspas', 'arco', 'cartao', 'circulo', 'folhas', 'moldura', 'editorial', 'campanha'],
@@ -50,15 +50,26 @@ export async function render(view, { query }) {
   return arts(view, fk, th, txt, tema);
 }
 
+/** Começa a criação com uma foto do celular (usado no Início e no passo 1) */
+export async function startFromPhoto(f) {
+  if (!f) return;
+  toast(t('Preparando sua foto...'));
+  try {
+    const a = await saveImageBlob(f, { name: f.name || 'minha-foto', source: 'celular' });
+    sessionStorage.setItem('sk-photo', a.id); sessionStorage.removeItem('sk-paisagem');
+    go({ f: 'story', th: 'mix', foto: '1' });
+  } catch (err) { toast(err.message || t('Não foi possível usar esta imagem.')); }
+}
+
 function formats(view) {
-  const big = [['story', '📱', 'Story', 'Instagram · 9:16'], ['feed', '🖼️', 'Feed', 'Instagram · 4:5'], ['foto', '📷', 'Da minha foto', 'Escolha a foto e pronto'], ['carousel', '🗂️', 'Carrossel', 'Várias páginas']];
+  const big = [['story', I.story, 'Story', 'Instagram · 9:16'], ['feed', I.feed, 'Feed', 'Instagram · 4:5'], ['foto', I.camera, 'Da minha foto', 'Escolha a foto e pronto'], ['carousel', I.carousel, 'Carrossel', 'Várias páginas']];
   view.innerHTML = `
     <div class="row between"><div><div class="eyebrow">${t('Criar')} · ${t('passo')} 1 ${t('de')} 3</div><h1 class="h-title" style="margin-top:4px">${t('O que vamos postar?')}</h1></div><button class="btn sm ghost" id="tour">${I.help}${t('Como fazer')}</button></div>
     <div class="qmain" id="fmts">${big.map(([k, ic, l, sub]) => k === 'foto'
       ? `<label class="qbig photo" data-big="foto"><input type="file" accept="image/*" id="myph" hidden><span class="ic">${ic}</span><b>${t(l)}</b><small>${t(sub)}</small></label>`
       : `<button class="qbig" data-fmt="${k}"><span class="ic">${ic}</span><b>${t(l)}</b><small>${t(sub)}</small></button>`).join('')}</div>
     <div class="qgroup" style="margin-top:16px">${t('Mais formatos')}</div>
-    <div class="chips" id="fmts2"><button class="chip" data-fmt="status">💬 ${t('Status do WhatsApp')}</button><button class="chip" data-fmt="square">◻️ ${t('Quadrado 1:1')}</button><button class="chip" data-fmt="feed" data-th="ladoalado">⚖️ ${t('Lado a lado')}</button></div>
+    <div class="chips" id="fmts2"><button class="chip ic" data-fmt="status">${I.chat}${t('Status do WhatsApp')}</button><button class="chip ic" data-fmt="square">${I.square}${t('Quadrado 1:1')}</button><button class="chip ic" data-fmt="feed" data-th="ladoalado">${I.scale}${t('Lado a lado')}</button></div>
     <h2 class="h-section" style="font-size:20px">${t('Outras formas de criar')}</h2>
     <a class="list-item" href="#/biblioteca"><span class="thumb">${I.grid}</span><span class="grow"><b>${t('Artes prontas')}</b><span class="xs muted">${t('Centenas de modelos com a sua marca')}</span></span></a>
     <a class="list-item" href="#/agenda"><span class="thumb">${I.calendar}</span><span class="grow"><b>${t('Semana temática')}</b><span class="xs muted">${t('Uma semana inteira de posts de uma vez')}</span></span></a>
@@ -66,15 +77,7 @@ function formats(view) {
     <a class="list-item" href="#/criar"><span class="thumb">${I.pages}</span><span class="grow"><b>${t('Meus projetos e editor completo')}</b><span class="xs muted">${t('Continuar uma arte, documentos')}</span></span></a>`;
   view.onclick = (e) => { const b = e.target.closest('[data-fmt]'); if (b) go(b.dataset.th ? { f: b.dataset.fmt, th: b.dataset.th } : { f: b.dataset.fmt }); };
   // Da minha foto: 1) toca aqui 2) escolhe a foto 3) toca na arte
-  $('#myph', view).onchange = async (e) => {
-    const f = e.target.files?.[0]; if (!f) return;
-    toast(t('Preparando sua foto...'));
-    try {
-      const a = await saveImageBlob(f, { name: f.name || 'minha-foto', source: 'celular' });
-      sessionStorage.setItem('sk-photo', a.id); sessionStorage.removeItem('sk-paisagem');
-      go({ f: 'story', th: 'mix', foto: '1' });
-    } catch (err) { toast(err.message || t('Não foi possível usar esta imagem.')); }
-  };
+  $('#myph', view).onchange = (e) => startFromPhoto(e.target.files?.[0]);
   $('#tour', view).onclick = () => import('./tour.js').then((m) => m.startTour('criar'));
 }
 
@@ -161,14 +164,14 @@ async function arts(view, fk, th, txt, tema, own = false) {
       <img data-asset="${st.photo || ''}" alt="" class="own-ph">
       <div class="grow"><b>${t('Sua foto já está nas artes')}</b><small>${t('Escolha o formato e o assunto, ou toque numa arte para postar.')}</small>
         <label class="btn sm secondary" style="margin-top:8px">${I.image}${t('Trocar foto')}<input type="file" accept="image/*" id="ownswap" hidden></label></div></div>
-    <div class="chips" id="ownfmt">${[['story', '📱 Story'], ['feed', '🖼️ Feed'], ['status', '💬 Status'], ['square', '◻️ ' + t('Quadrado')]].map(([k, l]) => `<button class="chip" data-ownf="${k}" aria-pressed="${fk === k}">${l}</button>`).join('')}</div>
-    <div class="chips" id="ownth" style="margin-top:6px">${[['mix', '✨ ' + t('Variado')], ['espiritualidade', '🙏 ' + t('Fé')], ['logoterapia', '🧭 ' + t('Sentido')], ['emocional', '🌿 ' + t('Cuidado')], ['relacoes', '🤝 ' + t('Relações')], ...(PHRASES.some((p) => p.custom) ? [['minhas', '🕊️ ' + t('Minhas')]] : [])].map(([k, l]) => `<button class="chip" data-ownt="${k}" aria-pressed="${th === k}">${l}</button>`).join('')}</div>` : '';
+    <div class="chips" id="ownfmt">${[['story', I.story + 'Story'], ['feed', I.feed + 'Feed'], ['status', I.chat + 'Status'], ['square', I.square + t('Quadrado')]].map(([k, l]) => `<button class="chip ic" data-ownf="${k}" aria-pressed="${fk === k}">${l}</button>`).join('')}</div>
+    <div class="chips" id="ownth" style="margin-top:6px">${[['mix', I.sparkle + t('Variado')], ['espiritualidade', I.cross + t('Fé')], ['logoterapia', I.compass + t('Sentido')], ['emocional', I.leaf + t('Cuidado')], ['relacoes', I.users + t('Relações')], ...(PHRASES.some((p) => p.custom) ? [['minhas', I.feather + t('Minhas')]] : [])].map(([k, l]) => `<button class="chip ic" data-ownt="${k}" aria-pressed="${th === k}">${l}</button>`).join('')}</div>` : '';
   view.innerHTML = `
     <div class="eyebrow">${own ? `📷 ${t('Da minha foto')} · ${t(F.label)}` : `${t(F.label)} · ${esc(label)} · ${t('passo')} 3 ${t('de')} 3`}</div>
     <h1 class="h-title" style="margin:4px 0 2px">${t('Escolha uma arte')}</h1>
     <p class="small muted" style="margin:0 0 10px">${t('Toque na arte para ver grande e postar.')}</p>
     ${fk === 'carousel' ? `<div class="qgroup" style="margin-top:6px">🗂️ ${t('Tipo de carrossel')}</div>
-    <div class="chips" id="ctype">${[['frases', '💬 ' + t('Frases do tema')], ['dicas', '📝 ' + t('Dicas passo a passo')], ['perguntas', '❓ ' + t('Perguntas para refletir')]].map(([k, l]) => `<button class="chip" data-ctype="${k}" aria-pressed="${st.ctype === k}">${l}</button>`).join('')}</div>` : ''}
+    <div class="chips" id="ctype">${[['frases', I.quote + t('Frases do tema')], ['dicas', I.list + t('Dicas passo a passo')], ['perguntas', I.help + t('Perguntas para refletir')]].map(([k, l]) => `<button class="chip ic" data-ctype="${k}" aria-pressed="${st.ctype === k}">${l}</button>`).join('')}</div>` : ''}
     ${tema ? `<details class="fold" style="margin:8px 0"><summary>✨ ${t('Texto pronto sobre')} ${esc(comp.theme)}</summary><div><div class="result small">${esc(comp.caption)}</div><button class="btn sm ghost" id="copytema" style="margin-top:8px">${I.copy}${t('Copiar texto')}</button></div></details>` : ''}
     ${ownBlock}
     ${fk === 'carousel' || own ? '' : `<div class="qgroup" style="margin-top:6px">🏞️ ${t('Paisagens reais · posts modernos')}</div>

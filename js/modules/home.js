@@ -27,7 +27,12 @@ export async function render(view) {
     <div class="eyebrow">${t('Estúdio criativo · identidade & conteúdo')}</div>
     <h1 class="h-display">${greeting()}, ${esc(p.name || 'Karina')}.</h1>
     <p class="muted" style="max-width:520px;margin:0 0 18px">${t('Ideias que acolhem. Conteúdos que transformam. Tudo com a sua identidade visual.')}</p>
-    <div class="grid c2" style="max-width:420px"><a class="btn" href="#/rapido?f=story">${I.plus}${t('Criar Story')}</a><a class="btn" href="#/rapido?f=feed">${I.plus}${t('Criar Feed')}</a></div>
+    <div class="hero-quick">
+      <a class="hq" href="#/rapido?f=story"><span>${I.story}</span><b>${t('Story')}</b></a>
+      <a class="hq" href="#/rapido?f=feed"><span>${I.feed}</span><b>${t('Feed')}</b></a>
+      <label class="hq photo"><input type="file" accept="image/*" id="homeph" hidden><span>${I.camera}</span><b>${t('Da minha foto')}</b></label>
+      <a class="hq" href="#/rapido?f=carousel"><span>${I.carousel}</span><b>${t('Carrossel')}</b></a>
+    </div>
     <div class="row" style="margin-top:8px"><a class="btn sm ghost" href="#/agenda">${I.calendar}${t('Ver programação')}</a><a class="btn sm ghost" href="#/perfil/criar-tutorial">${I.help}${t('Como criar (vídeo)')}</a></div>
   </section>
 
@@ -58,6 +63,7 @@ export async function render(view) {
   <p class="xs muted" style="text-align:center;margin-top:32px">Karina Ximenes · Psicóloga — Pessoas • Histórias • Recomeços</p>`;
 
   wireProjectThumbs(view, projects.slice(0, 10));
+  $('#homeph', view).onchange = async (e) => (await import('./quick.js')).startFromPhoto(e.target.files?.[0]);
   view.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-art]'); if (!b) return;
     const spec = JSON.parse(decodeURIComponent(b.dataset.art));
