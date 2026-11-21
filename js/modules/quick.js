@@ -201,7 +201,8 @@ async function arts(view, fk, th, txt, tema, own = false, vg = false) {
       const sw = g.keys.slice(0, 3).map((pk) => PALETTES[pk].bg).map((b) => `<i style="width:12px;height:12px;border-radius:50%;background:${b.type === 'solid' ? b.c1 : `linear-gradient(${b.c1},${b.c2})`};border:1px solid #0002;margin-right:-4px"></i>`).join('');
       return `<button class="chip" data-col="${k}" aria-pressed="${st.colors === k}">${k === 'todas' ? '' : `<span style="display:inline-flex;margin-right:6px">${sw}</span>`}${t(g.label)}</button>`; }).join('')}</div>
     <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:8px" id="g"></div>
-    <button class="btn block secondary" id="more" style="margin-top:14px">${I.refresh}${t('Ver outras artes')}</button>`;
+    <button class="btn block secondary" id="more" style="margin-top:14px">${I.plus}${t('Carregar mais artes')}</button>
+    <p class="xs muted" style="text-align:center;margin:6px 0 0">${t('Role até o fim para carregar mais sozinho.')}</p>`;
   for (const im of $$('img[data-asset]', view)) assetImage(im.dataset.asset).then((x) => { if (x) im.src = x.src; });
   // Aplica uma foto da Wikimedia (paisagem ou foto do mês) na arte
   const usePhoto = async (p, modern) => {
@@ -235,14 +236,33 @@ async function arts(view, fk, th, txt, tema, own = false, vg = false) {
   if (fk !== 'carousel' && !own && !vg) landscapePhotos().then((list) => strip('#land', list, true, 16)).catch(() => {});
   if (fk !== 'carousel' && !own) monthPhotos().then((list) => strip('#month', list, false, 10)).catch(() => {});
   const grid = $('#g', view);
+  // Grade com "Carregar mais": acrescenta artes no fim, sem apagar as que já estão na tela
+  let items = []; const base0 = st.shift; let loads = 0;
+  const drawObs = 'IntersectionObserver' in window ? new IntersectionObserver((es) => es.forEach((en) => {
+    if (!en.isIntersecting) return; drawObs.unobserve(en.target); const i = +en.target.closest('[data-i]').dataset.i;
+    drawThumb(en.target, pagesOf(items[i], st.photo)[0], items[i].format, 420);
+  }), { rootMargin: '300px' }) : null;
+  const addBatch = (list) => {
+    const start = items.length; items = items.concat(list.map((sp) => (st.style ? { ...sp, style: st.style } : sp)));
+    grid.insertAdjacentHTML('beforeend', list.map((_, k) => `<button class="art" data-i="${start + k}" aria-label="${t('Arte')} ${start + k + 1}">${fk === 'carousel' ? `<span class="pill">${t('Carrossel')}</span>` : ''}<canvas></canvas></button>`).join(''));
+    $$('canvas', grid).slice(start).forEach((c, k) => (drawObs ? drawObs.observe(c) : drawThumb(c, pagesOf(items[start + k], st.photo)[0], items[start + k].format, 420)));
+  };
   const paintGrid = () => {
-    const list = specs().map((sp) => (st.style ? { ...sp, style: st.style } : sp));
-    grid.innerHTML = list.map((_, i) => `<button class="art" data-i="${i}" aria-label="${t('Arte')} ${i + 1}">${fk === 'carousel' ? `<span class="pill">${t('Carrossel')}</span>` : ''}<canvas></canvas></button>`).join('');
-    const cs = $$('canvas', grid);
-    list.forEach((sp, i) => { const pg = pagesOf(sp, st.photo)[0]; drawThumb(cs[i], pg, sp.format, 420); });
-    grid.onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) postArt(list[+b.dataset.i], { photo: st.photo, wa: !!F.wa }); };
+    items = []; loads = 0; st.shift = base0; grid.innerHTML = '';
+    addBatch(specs());
+    grid.onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) postArt(items[+b.dataset.i], { photo: st.photo, wa: !!F.wa }); };
+  };
+  const loadMore = () => {
+    st.shift++; loads++; const next = specs();
+    // evita repetir exatamente a mesma arte na tela
+    const seen = new Set(items.map((x) => `${x.phraseId || x.phrase?.text}|${x.layout}|${x.palette}`));
+    addBatch(next.filter((x) => !seen.has(`${x.phraseId || x.phrase?.text}|${x.layout}|${x.palette}`)));
+    st.shift = base0 + loads; sessionStorage.setItem('sk-shift-' + (th || tema || 'txt'), base0);
   };
   paintGrid();
+  // carrega mais sozinho ao chegar no fim (até 12 vezes; depois é pelo botão)
+  const moreBtn = $('#more', view);
+  if (moreBtn && 'IntersectionObserver' in window) new IntersectionObserver((es) => { if (es[0].isIntersecting && loads < 12 && moreBtn.isConnected) loadMore(); }, { rootMargin: '200px' }).observe(moreBtn);
   if (vg && txt) setTimeout(() => $('#styles', view)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
   const sbox = $('#styles', view);
   if (sbox) {
@@ -263,7 +283,7 @@ async function arts(view, fk, th, txt, tema, own = false, vg = false) {
     if (sb) { st.style = sb.dataset.style; sessionStorage.setItem('sk-style', st.style); $$('#styles [data-style]', view).forEach((x) => x.setAttribute('aria-pressed', x === sb)); return paintGrid(); }
     if (e.target.closest('#copytema')) { copyText(comp.caption); return toast(t('Texto copiado.')); }
     const ct = e.target.closest('[data-ctype]'); if (ct) { st.ctype = ct.dataset.ctype; sessionStorage.setItem('sk-ctype', st.ctype); $$('#ctype .chip', view).forEach((x) => x.setAttribute('aria-pressed', x === ct)); return paintGrid(); }
-    if (e.target.closest('#more')) { st.shift++; sessionStorage.setItem('sk-shift-' + (th || tema || 'txt'), st.shift); paintGrid(); window.scrollTo({ top: grid.offsetTop - 80, behavior: 'smooth' }); return; }
+    if (e.target.closest('#more')) return loadMore();
     const col = e.target.closest('[data-col]'); if (col) { st.colors = col.dataset.col; sessionStorage.setItem('sk-colors', st.colors); $$('#cols .chip', view).forEach((x) => x.setAttribute('aria-pressed', x === col)); return paintGrid(); }
     const ph = e.target.closest('[data-ph]'); if (ph) { st.photo = ph.dataset.ph || null; st.photo ? sessionStorage.setItem('sk-photo', st.photo) : sessionStorage.removeItem('sk-photo'); $$('#ph button', view).forEach((x) => x.setAttribute('aria-pressed', x === ph)); return paintGrid(); }
     const sp = e.target.closest('[data-sp]');

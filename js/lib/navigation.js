@@ -29,7 +29,8 @@ export function enablePullBack() {
   document.addEventListener('touchstart', (event) => {
     reset();
     const target = event.target;
-    if (event.touches.length !== 1 || target.closest('input, textarea, select, [contenteditable], button, a, .ed-stage, .chips, #lock, .ed-props, .ed-tools, .ed-pages')) return;
+    // Começar o gesto em cima de cartões e botões também vale (o toque normal continua funcionando)
+    if (event.touches.length !== 1 || target.closest('input, textarea, select, [contenteditable], .ed-stage, #lock, .ed-props, .ed-tools, .ed-pages, .zoom')) return;
     const sheet = null; if (target.closest('.sheet')) return;
     const editor = document.body.classList.contains('editor-mode');
     if (!sheet && (document.querySelector('.sheet-backdrop') || (editor && !target.closest('.ed-top')))) return;

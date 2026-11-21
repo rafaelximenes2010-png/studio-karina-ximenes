@@ -14,6 +14,9 @@ export const PALETTES = {
   // Cores alegres (pedido da Karina): amarelo, lilás e bronze — todas com contraste AA conferido em teste
   amarelo: { name: 'Amarelo sol', mood: 'alegre', bg: { type: 'solid', c1: '#F6D365' }, ink: '#2B2A1F', label: '#5A4310', accent: '#435B49', soft: '#FBE7A1', card: '#FFFDF5', cardInk: '#33382F', ring: '#8C5A1E' },
   manha: { name: 'Manhã dourada', mood: 'alegre', bg: { type: 'linear', c1: '#FFE6A3', c2: '#F4B860', angle: 160 }, ink: '#2B2A1F', label: '#5A4310', accent: '#435B49', soft: '#FFF2CC', card: '#FFFFFF', cardInk: '#33382F', ring: '#8C5A1E' },
+  ceu: { name: 'Azul céu', mood: 'alegre', bg: { type: 'solid', c1: '#CFE3F5' }, ink: '#14304D', label: '#1F4A73', accent: '#2F6FA8', soft: '#E3EEF9', card: '#FFFFFF', cardInk: '#14304D', ring: '#2F6FA8' },
+  serenidade: { name: 'Serenidade', mood: 'alegre', bg: { type: 'linear', c1: '#E6F0FA', c2: '#B9D2EC', angle: 160 }, ink: '#17324F', label: '#24507C', accent: '#A8834F', soft: '#EEF4FB', card: '#FFFFFF', cardInk: '#17324F', ring: '#A8834F' },
+  marinho: { name: 'Azul marinho', mood: 'classica', bg: { type: 'linear', c1: '#1F3A5F', c2: '#142840', angle: 165 }, ink: '#F5F8FC', label: '#D6E4F2', accent: '#E3C27E', soft: '#2B4A73', card: '#F5F8FC', cardInk: '#14263D', ring: '#E3C27E' },
   lilas: { name: 'Lilás', mood: 'alegre', bg: { type: 'solid', c1: '#D9C8EE' }, ink: '#2E2340', label: '#3F2D5C', accent: '#7A5BA6', soft: '#E9DEF7', card: '#FFFFFF', cardInk: '#2E2340', ring: '#7A5BA6' },
   ametista: { name: 'Ametista', mood: 'alegre', bg: { type: 'linear', c1: '#6A4E98', c2: '#4A3570', angle: 165 }, ink: '#FBF7FF', label: '#EADDFB', accent: '#E8C77A', soft: '#5E4689', card: '#F7F1FF', cardInk: '#2E2340', ring: '#E8C77A' },
   bronze: { name: 'Bronze', mood: 'alegre', bg: { type: 'solid', c1: '#8A5A2B' }, ink: '#FFF8EE', label: '#F6E2C6', accent: '#F1C27D', soft: '#74491F', card: '#FFF8EE', cardInk: '#3A2A1A', ring: '#F1C27D' },
@@ -600,6 +603,12 @@ export function allArts() {
       arts.push({ id: `${p.id}|${layout}|${palette}`, phraseId: p.id, cat: p.cat, layout, palette });
     });
   }
+  // +100 artes ousadas da Vanguarda (uma por frase, até 100)
+  const bold = PHRASES.filter((p) => !p.items && !p.custom && p.cat !== 'datas' && p.cat !== 'divulgacao').slice(0, 100);
+  bold.forEach((p, i) => {
+    const layout = VANGUARDA[i % VANGUARDA.length]; const palette = PAL_KEYS[(hash(p.id) + 7) % PAL_KEYS.length];
+    arts.push({ id: `${p.id}|${layout}|${palette}`, phraseId: p.id, cat: p.cat, layout, palette, vanguarda: true });
+  });
   return arts;
 }
 
@@ -666,6 +675,7 @@ export const COLOR_GROUPS = {
   todas: { label: 'Todas as cores', keys: Object.keys(PALETTES) },
   alegres: { label: 'Alegres', keys: Object.keys(PALETTES).filter((k) => PALETTES[k].mood === 'alegre') },
   classicas: { label: 'Clássicas da marca', keys: Object.keys(PALETTES).filter((k) => PALETTES[k].mood !== 'alegre') },
+  azul: { label: 'Azul', keys: ['ceu', 'serenidade', 'marinho'] },
   amarelo: { label: 'Amarelo', keys: ['amarelo', 'manha'] },
   lilas: { label: 'Lilás', keys: ['lilas', 'ametista'] },
   bronze: { label: 'Bronze', keys: ['bronze', 'bronzeclaro'] },

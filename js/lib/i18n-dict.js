@@ -1007,4 +1007,10 @@ export const DICT = {
   "Ver nas artes": { en: "See it in the designs", es: "Verlo en las artes" },
   "Limpar": { en: "Clear", es: "Limpiar" },
   "Escreva uma frase.": { en: "Write a sentence.", es: "Escribe una frase." },
+  "Carregar mais artes": { en: "Load more designs", es: "Cargar más artes" },
+  "Role até o fim para carregar mais sozinho.": { en: "Scroll to the end to load more automatically.", es: "Desplázate al final para cargar más automáticamente." },
+  "Azul": { en: "Blue", es: "Azul" },
+  "Azul céu": { en: "Sky blue", es: "Azul cielo" },
+  "Serenidade": { en: "Serenity", es: "Serenidad" },
+  "Azul marinho": { en: "Navy blue", es: "Azul marino" },
 };
