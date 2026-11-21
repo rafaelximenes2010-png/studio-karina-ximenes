@@ -87,6 +87,19 @@ await step('Da minha foto em 3 toques; lado a lado; 4 opções no passo 1', asyn
   const m = await page.locator('#g [data-i]').count();
   return `4 opções (${opts.join(', ')}); foto própria → ${n} artes prontas, troca de formato ok; lado a lado: ${m} artes`;
 });
+await step('Início: puxar para baixo atualiza (mesmo começando num botão) e 565 artes', async () => {
+  await go('#/'); await page.waitForSelector('.hq');
+  const total = await page.evaluate(async () => (await import('./js/lib/templates.js')).allArts().length); if (total < 565) throw new Error('artes: ' + total);
+  const cdp = await page.context().newCDPSession(page);
+  await page.evaluate(() => { window.__r = 0; addEventListener('hashchange', () => window.__r++); });
+  const b = await page.locator('.hq').first().boundingBox(); const x = b.x + 20, y0 = b.y + 10;
+  const tp = (type, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+  await tp('touchStart', y0); for (let i = 1; i <= 12; i++) { await tp('touchMove', y0 + i * 12); await page.waitForTimeout(16); }
+  const hint = await page.locator('#pull-hint').innerText(); await tp('touchEnd'); await page.waitForTimeout(600);
+  const r = await page.evaluate(() => window.__r); const h = await page.evaluate(() => location.hash);
+  if (!r || h !== '#/') throw new Error(`não atualizou (${r}, ${h})`);
+  return `${total} artes prontas; puxar: "${hint}" → atualizou sem abrir o botão`;
+});
 await step('Vanguarda: 12 layouts ousados e estilos tipo filtro', async () => {
   await go('#/'); const wk = await page.locator('#weekly .art').count(); if (wk !== 12) throw new Error('novas da semana: ' + wk);
   await page.locator('#weekly').scrollIntoViewIfNeeded(); await page.waitForTimeout(1500); await shot('03n-novas-da-semana');
