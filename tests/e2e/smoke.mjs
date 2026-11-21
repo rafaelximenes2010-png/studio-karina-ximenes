@@ -71,6 +71,8 @@ await step('Criar rápido: Story → tema → arte → postar (3 toques)', async
   return `Story ${w}×${h} pronto para o Instagram; Feed com frase própria: ${await page.locator('#g [data-i]').count()} opções`;
 });
 await step('Da minha foto em 3 toques; lado a lado; 4 opções no passo 1', async () => {
+  await go('#/'); await page.waitForSelector('.hero-quick .hq'); const hq = await page.$$eval('.hero-quick .hq b', (b) => b.map((x) => x.textContent));
+  if (hq.join('|') !== 'Story|Feed|Da minha foto|Carrossel') throw new Error('início: ' + hq.join('|'));
   await go('#/rapido'); await page.waitForSelector('.qmain .qbig');
   const opts = await page.$$eval('.qmain .qbig b', (b) => b.map((x) => x.textContent));
   if (opts.join('|') !== 'Story|Feed|Da minha foto|Carrossel') throw new Error('opções: ' + opts.join('|'));

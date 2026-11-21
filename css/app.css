@@ -447,3 +447,20 @@ canvas.tap-zoom { cursor: zoom-in; }
 .proj-card:active, .doc-card:active { transform: scale(.97); }
 .doc-card { width: 128px; }
 .doc-card .doc-cover { aspect-ratio: 3 / 4; }
+/* Início: criações rápidas (4 opções) */
+.hero-quick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-width: 460px; }
+.hq { display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 10px 14px; border-radius: 18px; background: var(--primary); color: #fff; text-decoration: none; cursor: pointer; box-shadow: 0 6px 16px #435B4933; transition: transform .15s; }
+.hq span { font-size: 24px; line-height: 1; }
+.hq b { font-size: 16px; line-height: 1.15; }
+.hq.photo { background: linear-gradient(145deg, #A8834F, #8C6239); }
+.hq:active { transform: scale(.97); }
+/* Ícones profissionais (traço fino) no lugar dos emojis */
+.qbig .ic { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: #435B4914; color: var(--primary); margin-bottom: 10px; font-size: 0; }
+.qbig .ic svg { width: 26px; height: 26px; }
+.qbig.photo .ic { background: #ffffff22; color: #fff; }
+.qtheme .ic { color: #33382F; }
+.qtheme .ic svg { width: 24px; height: 24px; }
+.chip.ic { display: inline-flex; align-items: center; gap: 7px; }
+.chip.ic svg { width: 18px; height: 18px; flex: none; }
+.hq span { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: #ffffff1f; font-size: 0; }
+.hq span svg { width: 22px; height: 22px; }
