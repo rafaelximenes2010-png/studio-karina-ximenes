@@ -1,6 +1,6 @@
 // Service worker — offline e cache versionado. BUILD é gerado pelo conteúdo (scripts/gen_sw.py): cada publicação troca o cache inteiro.
 const VERSION = '2.1.1';
-const BUILD = 'e91492ce15';
+const BUILD = '2c2e493e00';
 const CACHE = 'studio-karina-' + VERSION + '-' + BUILD;
 const CORE = [
  "./",
