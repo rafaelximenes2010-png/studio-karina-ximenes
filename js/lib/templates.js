@@ -1,6 +1,6 @@
 // Gerador de artes: frases originais × layouts × paletas da marca.
 // Toda arte inclui a logomarca ORIGINAL (camada "logo") e a assinatura institucional.
-import { FORMATS, BRAND, layoutText } from './render.js';
+import { FORMATS, BRAND, layoutText, fontString } from './render.js';
 import { PHRASES, CATEGORIES, phraseById } from './content.js';
 
 export const PALETTES = {
@@ -23,16 +23,44 @@ export const PALETTES = {
 
 export const LAYOUTS = {
   minimal: 'Minimalista', editorial: 'Editorial', aspas: 'Citação', moldura: 'Moldura', dividido: 'Dividido',
-  arco: 'Arco', foto: 'Fotográfico', fotoarco: 'Foto em arco', fotocirculo: 'Retrato circular', fotofaixa: 'Foto panorâmica', fotolista: 'Lista com foto', comparativo: 'Lado a lado', paisagem: 'Paisagem moderna', paisagemcentro: 'Paisagem com cartão', tipografico: 'Tipográfico', cartao: 'Cartão',
+  arco: 'Arco', foto: 'Fotográfico', fotoarco: 'Foto em arco', fotocirculo: 'Retrato circular', fotofaixa: 'Foto panorâmica', fotolista: 'Lista com foto', revista: 'Revista', gigante: 'Palavra gigante', notas: 'Bloco de notas', postcard: 'Post', aura: 'Aura', marcatexto: 'Marca-texto', recibo: 'Receita do dia', conversa: 'Conversa', brutal: 'Neo-brutal', polaroid: 'Polaroid', dividido: 'Dividido', manuscrito: 'Manuscrito', comparativo: 'Lado a lado', paisagem: 'Paisagem moderna', paisagemcentro: 'Paisagem com cartão', tipografico: 'Tipográfico', cartao: 'Cartão',
   circulo: 'Círculo', folhas: 'Botânico', campanha: 'Campanha', institucional: 'Institucional', lista: 'Lista', cartaolista: 'Lista em cartão',
 };
 const TEXT_LAYOUTS = ['minimal', 'editorial', 'aspas', 'moldura', 'dividido', 'arco', 'foto', 'fotoarco', 'tipografico', 'cartao', 'circulo', 'folhas', 'campanha', 'institucional'];
+// Estilos no jeito dos filtros do Instagram: paleta + filtro da foto + fonte principal
+export const STYLES = [
+  { id: 'classico', label: 'Clássico', palette: 'creme', filter: 'none', font: 'serif' },
+  { id: 'floresta', label: 'Floresta', palette: 'floresta', filter: 'sage', font: 'serif' },
+  { id: 'aurora', label: 'Aurora', palette: 'aurora', filter: 'soft', font: 'serif' },
+  { id: 'mel', label: 'Mel', palette: 'manha', filter: 'warm', font: 'sans' },
+  { id: 'lavanda', label: 'Lavanda', palette: 'lilas', filter: 'lavanda', font: 'serif' },
+  { id: 'ametista', label: 'Ametista', palette: 'ametista', filter: 'noite', font: 'display' },
+  { id: 'bronze', label: 'Bronze', palette: 'bronze', filter: 'dourado', font: 'serif' },
+  { id: 'areia', label: 'Areia', palette: 'bronzeclaro', filter: 'warm', font: 'hand' },
+  { id: 'linho', label: 'Linho', palette: 'linho', filter: 'bruma', font: 'sans' },
+  { id: 'grafite', label: 'Grafite', palette: 'grafite', filter: 'mono', font: 'display' },
+  { id: 'salvia', label: 'Sálvia', palette: 'salvia', filter: 'oliva', font: 'sans' },
+  { id: 'dourado', label: 'Dourado', palette: 'dourado', filter: 'dourado', font: 'georgia' },
+  { id: 'sol', label: 'Sol', palette: 'amarelo', filter: 'coral', font: 'display' },
+  { id: 'diario', label: 'Diário', palette: 'linho', filter: 'film', font: 'hand' },
+  { id: 'noite', label: 'Noite', palette: 'floresta', filter: 'noite', font: 'sans' },
+  { id: 'maquina', label: 'Máquina', palette: 'creme', filter: 'film', font: 'mono' },
+];
+export const VANGUARDA = ['revista', 'gigante', 'aura', 'marcatexto', 'conversa', 'brutal', 'notas', 'postcard', 'polaroid', 'recibo', 'dividido', 'manuscrito'];
+// Ajusta o tamanho para uma linha caber na largura (mede de verdade quando há contexto de medida)
+function fitOneLine(l, maxW, mctx) {
+  if (!mctx) return l;
+  mctx.font = fontString(l); const w = mctx.measureText(l.text).width + (l.ls || 0) * l.text.length;
+  if (w > maxW) l.size = Math.floor(l.size * maxW / w);
+  return l;
+}
 const LIST_LAYOUTS = ['lista', 'cartaolista'];
 export const layoutsFor = (p) => (p.items ? LIST_LAYOUTS : TEXT_LAYOUTS);
 
 let lid = 0;
 const id = () => 'l' + (++lid).toString(36) + Math.random().toString(36).slice(2, 6);
-const T = (text, x, y, w, size, o = {}) => ({ id: id(), type: 'text', text, x, y, w, size, font: 'serif', weight: 400, color: '#33382F', align: 'center', lh: 1.22, ...o });
+let BASE_FONT = 'serif';
+const T = (text, x, y, w, size, o = {}) => ({ id: id(), type: 'text', text, x, y, w, size, font: BASE_FONT, weight: 400, color: '#33382F', align: 'center', lh: 1.22, ...o });
 const S = (shape, x, y, w, h, o = {}) => ({ id: id(), type: 'shape', shape, x, y, w, h, ...o });
 const LOGO = (x, y, s, o = {}) => ({ id: id(), type: 'logo', x, y, w: s, h: s, mask: 'circle', ...o });
 const IMG = (x, y, w, h, o = {}) => ({ id: id(), type: 'image', x, y, w, h, assetId: null, ...o });
@@ -207,6 +235,158 @@ const L = {
     if (closeT) { closeT.y = bottom + 18; out.push(S('line', m, bottom + 2, W - m * 2, 2, { stroke: gold, sw: 1.5 })); out.push(closeT); }
     return [...out, ...ft];
   },
+  // ===== VANGUARDA: layouts ousados, no ritmo do Instagram =====
+  // Revista: capa editorial com a marca como título
+  revista(p, pal, F, o) {
+    const { W, H, m } = F; const ink = pal.ink;
+    const mast = T('KARINA', m, F.top - 10, W - m * 2, Math.round((W - m * 2) * 0.235), { font: 'display', weight: 800, color: pal.accent || BRAND.gold, lh: 1 });
+    fitOneLine(mast, W - m * 2, o.mctx);
+    const issue = T(`Edição de ${new Date().toLocaleDateString('pt-BR', { month: 'long' })} · ${labelOf(p) || 'Reflexões'}`, m, mast.y + mast.size * 1.08, W - m * 2, 22, { font: 'sans', weight: 700, upper: true, ls: 5, color: ink, align: 'left' });
+    const t = T(p.text, m, 0, W - m * 2, 76, { weight: 600, color: ink, align: 'left', lh: 1.06 });
+    const ft = footer(F, pal, o.sig, 'left');
+    fit(t, H * 0.34, ft[0].y - H * 0.34 - 90, o.mctx);
+    return [mast, S('line', m, issue.y + 44, W - m * 2, 4, { stroke: ink, sw: 2 }), issue, t,
+      T('nesta edição: pausa · sentido · cuidado', m, ft[0].y - 70, W - m * 2, 22, { font: 'mono', color: ink, align: 'left', ls: 1 }), ...ft];
+  },
+  // Gigante: uma palavra enorme vazada + a frase
+  gigante(p, pal, F, o) {
+    const { W, H, m } = F; const ink = pal.ink;
+    const stop = /^(para|como|quando|porque|sobre|entre|ainda|também|sempre|nunca|muito|mesmo|tudo|nada|isso|essa|esse|você|nossa|nosso|cada|mais|menos|pode|deve|quem|onde|seus|suas|pela|pelo|sendo)$/i;
+    const words = String(p.text).replace(/[^\p{L}\s-]/gu, ' ').split(/\s+/).filter((w) => w.length >= 4 && !stop.test(w));
+    const short = words.filter((w) => w.length <= 9).sort((a, b) => b.length - a.length);
+    const key = (short[0] || words.sort((a, b) => b.length - a.length)[0] || 'vida').toUpperCase();
+    const rows = H / W > 1.5 ? 4 : 3;
+    const probe = fitOneLine(T(key, 0, 0, W, Math.round(W * 0.3), { font: 'display', weight: 800 }), W - 50, o.mctx);
+    const size = o.mctx ? probe.size : Math.min(Math.round((W - 40) / (Math.max(4, key.length) * 0.78)), Math.round(W * 0.3));
+    const out = [];
+    for (let i = 0; i < rows; i++) out.push(T(key, 0, H * 0.12 + i * size * 0.95, W, size, { font: 'display', weight: 800, color: ink, outline: i !== 1, lh: 1, opacity: i === 1 ? 1 : 0.55 }));
+    const ft = footer(F, pal, o.sig, 'left');
+    const t = T(p.text, m, 0, W - m * 2, 54, { font: 'sans', weight: 600, color: ink, align: 'left', lh: 1.2 });
+    fit(t, H * 0.12 + size * rows + 30, ft[0].y - (H * 0.12 + size * rows) - 70, o.mctx);
+    return [...out, t, ...ft];
+  },
+  // Notas: bloco de notas do celular
+  notas(p, pal, F, o) {
+    const { W, H, m } = F;
+    const paper = '#FFFDF6'; const ink = '#2B2B2B'; const accent = '#E0A100';
+    const hd = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const items = p.items?.length ? p.items.slice(0, 6) : null;
+    const t = T(items ? (p.title || p.text) : p.text, m + 10, 0, W - m * 2 - 20, items ? 52 : 60, { font: 'sans', weight: 600, color: ink, align: 'left', lh: 1.22 });
+    if (!items) t.size = 72;
+    fit(t, H * 0.2, items ? H * 0.2 : H * 0.5, o.mctx, 'top');
+    const out = [S('rect', 0, 0, W, H, { fill: paper }), T('‹ Notas', m - 10, F.top - 10, 300, 34, { font: 'sans', weight: 600, color: accent, align: 'left' }),
+      T(hd, m + 10, H * 0.13, W - m * 2, 24, { font: 'sans', color: '#8A8A8A', align: 'center' }), t];
+    let y = t.y + textH(t, o.mctx) + 40;
+    for (const it of items || []) { out.push(S('ellipse', m + 14, y + 6, 30, 30, { stroke: accent, sw: 3 })); out.push(T(it, m + 64, y, W - m * 2 - 70, 36, { font: 'sans', color: ink, align: 'left' })); y += 70; }
+    return [...out, ...footer(F, pal, o.sig, 'left', ink)];
+  },
+  // Post: cartão de publicação com a marca
+  postcard(p, pal, F, o) {
+    const { W, H, m } = F; const cw = W - m * 2; const ink = '#1F2421';
+    const t = T(p.text, m + 44, 0, cw - 88, 58, { font: 'sans', weight: 500, color: ink, align: 'left', lh: 1.28 });
+    const th = textH(t, o.mctx); const ch = th + 330; const cy = (H - ch) / 2;
+    t.y = cy + 170;
+    return [S('rect', m, cy, cw, ch, { fill: '#FFFFFF', radius: 40, stroke: '#00000012', sw: 2 }),
+      LOGO(m + 44, cy + 44, 92, { ring: pal.ring }),
+      T('Karina Ximenes', m + 156, cy + 52, cw - 200, 34, { font: 'sans', weight: 700, color: ink, align: 'left' }),
+      T('Psicóloga · agora', m + 156, cy + 96, cw - 200, 26, { font: 'sans', color: '#6B6F6C', align: 'left' }),
+      t, S('line', m + 44, t.y + th + 40, cw - 88, 2, { stroke: '#00000018', sw: 2 }),
+      T('♡  Curtir     ◯  Comentar     ↗  Enviar     ⌑  Salvar', m + 44, t.y + th + 66, cw - 88, 26, { font: 'sans', weight: 500, color: '#6B6F6C', align: 'left' })];
+  },
+  // Aura: gradientes suaves + cartão de vidro
+  aura(p, pal, F, o) {
+    const { W, H, m } = F; const ink = '#2A2F2B';
+    const cols = ['#E7C27A', '#9DC3A6', '#C9B6E8'];
+    const t = T(p.text, m + 50, 0, W - m * 2 - 100, 60, { weight: 600, color: ink, lh: 1.18 });
+    const th = textH(t, o.mctx); const cy = (H - th - 160) / 2; t.y = cy + 80;
+    return [S('rect', 0, 0, W, H, { fill: '#F7F3EC' }),
+      S('glow', -W * 0.35, -W * 0.25, W * 1.3, W * 1.3, { fill: cols[0] }), S('glow', W * 0.15, H * 0.3, W * 1.3, W * 1.3, { fill: cols[2] }), S('glow', -W * 0.4, H - W * 0.9, W * 1.3, W * 1.3, { fill: cols[1] }),
+      S('rect', m, cy, W - m * 2, th + 160, { fill: 'rgba(255,255,255,0.45)', radius: 48, stroke: 'rgba(255,255,255,0.8)', sw: 3 }), t,
+      ...footer(F, pal, o.sig, 'center', ink)];
+  },
+  // Marca-texto: frase grande com destaque
+  marcatexto(p, pal, F, o) {
+    const { W, H, m } = F; const ink = '#1F2421';
+    const t = T(p.text, m, 0, W - m * 2, 74, { font: 'display', weight: 700, color: ink, align: 'left', lh: 1.25, hl: '#FFE27A' });
+    const ft = footer(F, pal, o.sig, 'left', ink); fit(t, F.top + 60, ft[0].y - F.top - 120, o.mctx);
+    return [S('rect', 0, 0, W, H, { fill: '#FBFAF6' }), T('lembrete', m, F.top, 400, 30, { font: 'mono', weight: 700, color: '#B07D18', align: 'left', upper: true, ls: 4 }), t, ...ft];
+  },
+  // Receita: cupom de autocuidado
+  recibo(p, pal, F, o) {
+    const { W, H, m } = F; const ink = '#2B2B2B'; const pw = W - m * 2 - 40; const px = (W - pw) / 2;
+    const items = p.items?.length ? p.items.slice(0, 5).map((x, i) => [x, '1x']) : [['pausa sem culpa', '1x'], ['respirações profundas', '3x'], ['motivos de gratidão', '3x'], ['conversa sincera', '1x']];
+    const t = T(p.items ? (p.title || p.text) : p.text, px + 40, 0, pw - 80, 38, { font: 'mono', color: ink, lh: 1.3 });
+    const card = S('rect', px, F.top, pw, 100, { fill: '#FFFFFF', radius: 8 });
+    const out = [card,
+      T('RECEITA DO DIA', px, F.top + 50, pw, 40, { font: 'mono', weight: 700, color: ink, ls: 4 }),
+      T(new Date().toLocaleDateString('pt-BR') + ' · nº 0' + (String(p.text).length % 90 + 10), px, F.top + 106, pw, 24, { font: 'mono', color: '#777' }),
+      S('dash', px + 30, F.top + 150, pw - 60, 4, { stroke: '#999', sw: 2 })];
+    t.y = F.top + 180; out.push(t); let y = t.y + textH(t, o.mctx) + 30;
+    out.push(S('dash', px + 30, y, pw - 60, 4, { stroke: '#999', sw: 2 })); y += 30;
+    for (const [it, q] of items) { out.push(T(it, px + 40, y, pw - 170, 30, { font: 'mono', color: ink, align: 'left' })); out.push(T(q, px + pw - 130, y, 90, 30, { font: 'mono', color: ink, align: 'right' })); y += 54; }
+    out.push(S('dash', px + 30, y + 6, pw - 60, 4, { stroke: '#999', sw: 2 }));
+    out.push(T('TOTAL', px + 40, y + 34, 200, 34, { font: 'mono', weight: 700, color: ink, align: 'left' }), T('um dia mais leve', px + 200, y + 34, pw - 240, 34, { font: 'mono', weight: 700, color: ink, align: 'right' }));
+    out.push(T('obrigada pela visita ♡', px, y + 110, pw, 26, { font: 'mono', color: '#777' }));
+    card.h = y + 170 - F.top;
+    // centraliza o cupom na altura
+    const dy = Math.max(0, (F.bot - 220 - F.top - card.h) / 2); if (dy) for (const l of out) l.y += dy;
+    return [...out, ...footer(F, pal, o.sig, 'left')];
+  },
+  // Conversa: balões de diálogo
+  conversa(p, pal, F, o) {
+    const { W, H, m } = F;
+    const Q = { logoterapia: 'Qual o sentido disso tudo?', espiritualidade: 'E quando eu não sinto Deus perto?', emocional: 'E se eu não der conta?', relacoes: 'Por que é tão difícil conversar?', emdr: 'Será que um dia isso para de doer?', neuro: 'Por que é tão difícil mudar?', psicoeducacao: 'Por onde eu começo?' };
+    const q = T(Q[p.cat] || 'E agora, por onde eu recomeço?', m + 40, 0, W * 0.62 - 80, 50, { font: 'sans', weight: 500, color: '#1F2421', align: 'left', lh: 1.25 });
+    const a = T(p.items ? (p.title || p.text) : p.text, W * 0.3 + 40, 0, W * 0.7 - m - 80, 50, { font: 'sans', weight: 500, color: '#FFFFFF', align: 'left', lh: 1.25 });
+    const qh = textH(q, o.mctx); const ah = textH(a, o.mctx);
+    const y0 = Math.max(F.top + 60, (H - qh - ah - 200) / 2);
+    q.y = y0 + 34; a.y = y0 + qh + 68 + 60 + 34;
+    return [S('rect', m, y0, W * 0.62, qh + 68, { fill: '#ECEAE6', radius: 40 }), q,
+      S('rect', W * 0.3, y0 + qh + 68 + 60, W * 0.7 - m, ah + 68, { fill: pal.accent && pal.accent !== '#FFFFFF' ? '#435B49' : '#435B49', radius: 40 }), a,
+      T('digitando…', W * 0.3, a.y + ah + 60, W * 0.7 - m, 24, { font: 'sans', color: pal.ink, align: 'right', italic: true }),
+      ...footer(F, pal, o.sig, 'left')];
+  },
+  // Neo-brutalista: bordas grossas, sombra deslocada, cores vivas
+  brutal(p, pal, F, o) {
+    const { W, H, m } = F; const bk = '#141414'; const bgc = ['#FFE066', '#C9B6FF', '#B8F2C9', '#FFC2A8'][String(p.text).length % 4];
+    const cw = W - m * 2 - 20; const t = T(p.text, m + 50, 0, cw - 80, 66, { font: 'display', weight: 800, color: bk, align: 'left', lh: 1.1 });
+    const th = textH(t, o.mctx); const cy = Math.max(F.top + 110, (H - th - 140) / 2); t.y = cy + 70;
+    return [S('rect', 0, 0, W, H, { fill: bgc }),
+      S('rect', m + 22, cy + 22, cw, th + 140, { fill: bk, radius: 28 }),
+      S('rect', m, cy, cw, th + 140, { fill: '#FFFFFF', radius: 28, stroke: bk, sw: 8 }), t,
+      S('rect', m + 30, cy - 46, 260, 70, { fill: bk, radius: 35 }), T('LEMBRETE', m + 30, cy - 34, 260, 28, { font: 'mono', weight: 700, color: '#FFFFFF', ls: 3 }),
+      ...footer(F, pal, o.sig, 'left', bk)];
+  },
+  // Polaroid: foto (ou cor) inclinada com legenda manuscrita
+  polaroid(p, pal, F, o) {
+    const { W, H, m } = F; const pw = W * 0.74; const px = (W - pw) / 2; const py = F.top + 40; const ph = pw * 0.95;
+    const t = T(p.text, px + 30, 0, pw - 60, 50, { font: 'hand', weight: 600, color: '#2B2B2B', lh: 1.1 });
+    fit(t, py + ph + 40, Math.min(260, F.bot - (py + ph) - 260), o.mctx, 'top');
+    const fh = ph + textH(t, o.mctx) + 110;
+    return [S('rect', 0, 0, W, H, { fill: pal.bg.c1 || BRAND.cream }),
+      S('rect', px + 14, py + 18, pw, fh, { fill: 'rgba(0,0,0,0.12)', radius: 6, rot: -3 }),
+      S('rect', px, py, pw, fh, { fill: '#FFFFFF', radius: 6, rot: -3 }),
+      IMG(px + 30, py + 30, pw - 60, ph - 30, { rot: -3, ph1: pal.soft, ph2: pal.accent || BRAND.sage }),
+      S('rect', px + pw / 2 - 90, py - 22, 180, 50, { fill: 'rgba(240,226,190,0.85)', rot: 4 }),
+      { ...t, rot: -3 }, ...footer(F, pal, o.sig, 'left')];
+  },
+  // Dividido: metade cor, metade frase
+  dividido(p, pal, F, o) {
+    const { W, H, m } = F; const top = H * 0.42; const ink = pal.ink;
+    const key = T('“', 0, top * 0.18, W, Math.round(W * 0.5), { weight: 600, color: '#FFFFFF', lh: 1 });
+    const t = T(p.text, m, 0, W - m * 2, 58, { weight: 600, color: ink, lh: 1.18 });
+    const ft = footer(F, pal, o.sig, 'center'); fit(t, top + 110, ft[0].y - top - 160, o.mctx);
+    return [S('rect', 0, 0, W, top, { fill: pal.accent || BRAND.green }), key, LOGO(W / 2 - 70, top - 70, 140, { ring: pal.ring }), t, ...ft.slice(1)];
+  },
+  // Manuscrito: frase à mão com grifo
+  manuscrito(p, pal, F, o) {
+    const { W, H, m } = F; const ink = '#263028';
+    const t = T(p.text, m, 0, W - m * 2, 78, { font: 'hand', weight: 600, color: ink, lh: 1.08 });
+    const ft = footer(F, pal, o.sig, 'center', ink); fit(t, F.top + 40, ft[0].y - F.top - 160, o.mctx);
+    const y2 = t.y + textH(t, o.mctx) + 26;
+    return [S('rect', 0, 0, W, H, { fill: '#FBF7EF' }), ...Array.from({ length: 22 }, (_, i) => S('line', 0, F.top + i * ((H - F.top) / 22), W, 2, { stroke: '#E6DFD0', sw: 1 })),
+      t, S('line', W / 2 - 160, y2, 320, 10, { stroke: pal.accent || BRAND.gold, sw: 6 }), T('♡', W / 2 - 40, y2 + 30, 80, 60, { font: 'sans', color: pal.accent || BRAND.gold }), ...ft];
+  },
   paisagem(p, pal, F, o) {
     const ft = footer(F, pal, o.sig, 'left', BRAND.cream);
     const t = T(p.text, F.m, 0, F.W - F.m * 2, 62, { font: 'sans', weight: 600, align: 'left', color: '#FFFFFF', shadow: true, lh: 1.18 });
@@ -347,11 +527,14 @@ const L = {
 
 /** Cria as páginas de uma arte. spec: {phraseId|phrase, layout, palette, format}; o: {sig, mctx} */
 export function buildPages(spec, o = {}) {
+  BASE_FONT = 'serif';
   if (spec.layout === 'carrossel-tema') return buildThemeCarousel(spec, o);
   const p = spec.phrase || phraseById(spec.phraseId);
   if (!p) throw new Error('Frase não encontrada: ' + spec.phraseId);
-  const pal = PALETTES[spec.palette] || PALETTES.creme;
+  const sty = spec.style && STYLES.find((x) => x.id === spec.style);
+  const pal = PALETTES[sty?.palette || spec.palette] || PALETTES.creme;
   const fmt = FORMATS[spec.format] ? spec.format : 'portrait';
+  BASE_FONT = sty?.font || 'serif';
   const F = frame(fmt);
   const opts = { sig: o.sig || 'Karina Ximenes | Psicóloga', mctx: o.mctx };
   let layout = spec.layout;
@@ -365,6 +548,8 @@ export function buildPages(spec, o = {}) {
     return pages;
   }
   const pg = page(L[layout](p, pal, F, opts));
+  BASE_FONT = 'serif';
+  if (sty?.filter && sty.filter !== 'none') for (const l of pg.layers) if (l.type === 'image' && !l.filter) l.filter = sty.filter;
   // Foto escolhida para a semana (ou pelo Frankie) já entra na arte
   if (spec.photo) for (const l of pg.layers) if (l.type === 'image' && !l.assetId) l.assetId = spec.photo;
   return [pg];

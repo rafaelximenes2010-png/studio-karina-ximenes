@@ -1,6 +1,6 @@
 // Service worker — offline e cache versionado. BUILD é gerado pelo conteúdo (scripts/gen_sw.py): cada publicação troca o cache inteiro.
 const VERSION = '2.1.1';
-const BUILD = '0deb234556';
+const BUILD = 'aa05f22f7b';
 const CACHE = 'studio-karina-' + VERSION + '-' + BUILD;
 const CORE = [
  "./",
@@ -14,6 +14,7 @@ const CORE = [
  "./assets/brand/logo-original.jpg",
  "./assets/brand/og-image.jpg",
  "./assets/brand/og-square.png",
+ "./assets/fonts/caveat-latin-600-normal.woff2",
  "./assets/fonts/cormorant-garamond-latin-400-italic.woff2",
  "./assets/fonts/cormorant-garamond-latin-400-normal.woff2",
  "./assets/fonts/cormorant-garamond-latin-600-normal.woff2",
@@ -21,6 +22,10 @@ const CORE = [
  "./assets/fonts/inter-latin-500-normal.woff2",
  "./assets/fonts/inter-latin-600-normal.woff2",
  "./assets/fonts/inter-latin-700-normal.woff2",
+ "./assets/fonts/space-mono-latin-400-normal.woff2",
+ "./assets/fonts/space-mono-latin-700-normal.woff2",
+ "./assets/fonts/syne-latin-700-normal.woff2",
+ "./assets/fonts/syne-latin-800-normal.woff2",
  "./assets/photos/caderno.jpg",
  "./assets/photos/cha.jpg",
  "./assets/photos/eucalipto.jpg",

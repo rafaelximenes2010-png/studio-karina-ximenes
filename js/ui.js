@@ -162,7 +162,7 @@ export async function imagesFor(pages) {
 let fontsReady;
 export function ensureFonts() {
   if (!fontsReady) {
-    fontsReady = Promise.all(['400 40px "Cormorant Garamond"', 'italic 400 40px "Cormorant Garamond"', '600 40px "Cormorant Garamond"', '400 40px Inter', '500 40px Inter', '600 40px Inter', '700 40px Inter']
+    fontsReady = Promise.all(['400 40px "Cormorant Garamond"', 'italic 400 40px "Cormorant Garamond"', '600 40px "Cormorant Garamond"', '400 40px Inter', '500 40px Inter', '600 40px Inter', '700 40px Inter', '600 40px Caveat', '700 40px Syne', '800 40px Syne', '400 40px "Space Mono"', '700 40px "Space Mono"']
       .map((f) => document.fonts.load(f).catch(() => null))).then(() => document.fonts.ready);
   }
   return fontsReady;

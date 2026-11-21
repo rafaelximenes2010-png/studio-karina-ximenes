@@ -11,7 +11,9 @@ export const FONTS = {
   serif: { label: 'Cormorant (elegante)', css: '"Cormorant Garamond", Georgia, serif' },
   sans: { label: 'Inter (moderna)', css: 'Inter, "Helvetica Neue", Arial, sans-serif' },
   georgia: { label: 'Georgia (editorial)', css: 'Georgia, "Times New Roman", serif' },
-  mono: { label: 'Mono (técnica)', css: '"SFMono-Regular", Menlo, Consolas, monospace' },
+  mono: { label: 'Mono (técnica)', css: '"Space Mono", "SFMono-Regular", Menlo, Consolas, monospace' },
+  display: { label: 'Syne (ousada)', css: 'Syne, Inter, "Helvetica Neue", Arial, sans-serif' },
+  hand: { label: 'Caveat (manuscrita)', css: 'Caveat, "Bradley Hand", "Segoe Print", cursive' },
 };
 
 export const BRAND = { green: '#435B49', sage: '#91A595', cream: '#F5EEE2', gold: '#A8834F', graphite: '#33382F' };
@@ -98,6 +100,16 @@ function drawText(ctx, l) {
   const { lines, lineH, pad, h } = layoutText(ctx, l);
   if (l.bg) { ctx.fillStyle = l.bg; roundRect(ctx, l.x, l.y, l.w, h, l.radius ?? 18); ctx.fill(); }
   ctx.font = fontString(l);
+  // Marca-texto atrás de cada linha
+  if (l.hl) {
+    const ls0 = l.ls || 0; const inner0 = l.w - pad * 2;
+    lines.forEach((ln, i) => {
+      const wdt = measure(ctx, ln, ls0); let x0 = l.x + pad;
+      if (l.align === 'center') x0 += (inner0 - wdt) / 2; else if (l.align === 'right') x0 += inner0 - wdt;
+      ctx.fillStyle = l.hl; const yy = l.y + pad + lineH * i + lineH * 0.2;
+      roundRect(ctx, x0 - lineH * 0.12, yy, wdt + lineH * 0.24, lineH * 0.72, lineH * 0.12); ctx.fill();
+    });
+  }
   ctx.fillStyle = l.color || BRAND.graphite;
   ctx.textBaseline = 'middle';
   if (l.shadow) { ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 3; }
@@ -108,7 +120,8 @@ function drawText(ctx, l) {
     let x = l.x + pad;
     if (l.align === 'center') x = l.x + pad + (inner - width) / 2;
     else if (l.align === 'right') x = l.x + pad + inner - width;
-    if (!ls) { ctx.textAlign = 'left'; ctx.fillText(ln, x, y); }
+    if (l.outline) { ctx.textAlign = 'left'; ctx.lineJoin = 'round'; ctx.strokeStyle = l.color || BRAND.graphite; ctx.lineWidth = Math.max(2, (l.size || 48) * 0.035); ctx.strokeText(ln, x, y); }
+    else if (!ls) { ctx.textAlign = 'left'; ctx.fillText(ln, x, y); }
     else { ctx.textAlign = 'left'; for (const ch of ln) { ctx.fillText(ch, x, y); x += ctx.measureText(ch).width + ls; } }
   });
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
@@ -119,6 +132,15 @@ function drawShape(ctx, l) {
   if (l.shape === 'line') {
     ctx.strokeStyle = l.stroke || l.fill || BRAND.gold; ctx.lineWidth = l.sw || 3; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke(); return;
+  }
+  if (l.shape === 'glow') {
+    const g = ctx.createRadialGradient(x + w / 2, y + h / 2, 0, x + w / 2, y + h / 2, Math.max(w, h) / 2);
+    g.addColorStop(0, l.fill || BRAND.sage); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h); return;
+  }
+  if (l.shape === 'dash') {
+    ctx.strokeStyle = l.stroke || BRAND.graphite; ctx.lineWidth = l.sw || 2; ctx.setLineDash([l.sw * 3 || 8, l.sw * 3 || 8]);
+    ctx.beginPath(); ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); ctx.stroke(); ctx.setLineDash([]); return;
   }
   if (l.shape === 'ellipse') { ctx.beginPath(); ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); }
   else if (l.shape === 'arch') archPath(ctx, x, y, w, h);
@@ -156,6 +178,12 @@ export const FILTERS = {
   bright: { label: 'Luminoso', bright: 1.12, contrast: 1.05 },
   film: { label: 'Filme', contrast: 1.1, sat: 0.85, sepia: 0.12 },
   mono: { label: 'P&B', sat: 0, contrast: 1.05 },
+  dourado: { label: 'Dourado', sepia: 0.2, sat: 1.15, tint: [214, 170, 100], tintA: 0.14, bright: 1.04 },
+  lavanda: { label: 'Lavanda', sat: 0.85, tint: [185, 165, 220], tintA: 0.18, bright: 1.04 },
+  bruma: { label: 'Bruma', sat: 0.6, contrast: 0.92, bright: 1.08 },
+  noite: { label: 'Noite', sat: 0.8, contrast: 1.12, bright: 0.86, tint: [40, 50, 70], tintA: 0.18 },
+  oliva: { label: 'Oliva', sat: 0.8, tint: [120, 130, 80], tintA: 0.16, contrast: 1.05 },
+  coral: { label: 'Coral', sat: 1.1, tint: [240, 140, 110], tintA: 0.12, bright: 1.04 },
 };
 const filterCache = new WeakMap();
 function filtered(img, name) {

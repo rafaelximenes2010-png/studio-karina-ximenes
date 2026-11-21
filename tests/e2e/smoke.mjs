@@ -87,6 +87,18 @@ await step('Da minha foto em 3 toques; lado a lado; 4 opções no passo 1', asyn
   const m = await page.locator('#g [data-i]').count();
   return `4 opções (${opts.join(', ')}); foto própria → ${n} artes prontas, troca de formato ok; lado a lado: ${m} artes`;
 });
+await step('Vanguarda: 12 layouts ousados e estilos tipo filtro', async () => {
+  await go('#/'); await page.click('.vg-banner'); await page.waitForSelector('.vg-hero'); await page.waitForSelector('#g canvas'); await page.waitForTimeout(2500);
+  await shot('03l-vanguarda');
+  const n = await page.locator('#g [data-i]').count(); if (n !== 12) throw new Error('artes: ' + n);
+  const styles = await page.locator('#styles [data-style]').count(); if (styles < 15) throw new Error('estilos: ' + styles);
+  await page.click('#styles [data-style=lavanda]'); await page.waitForTimeout(1500); await shot('03m-estilo-lavanda');
+  await page.click('[data-ownf=feed]'); await page.waitForFunction(() => location.hash.includes('vg=1') && location.hash.includes('f=feed'));
+  await page.waitForSelector('#g canvas'); await page.locator('#g [data-i]').first().click(); await page.waitForSelector('#ig:not([disabled])', { timeout: 20000 });
+  await page.click('#big'); await page.waitForSelector('.zoom.in canvas'); await page.click('[data-zx]'); await closeSheets();
+  await page.evaluate(() => sessionStorage.removeItem('sk-style'));
+  return `${n} artes ousadas, ${styles} estilos (Original + ${styles - 1}), troca de formato e postagem ok`;
+});
 await step('Tema livre gera frases e texto; tipos de carrossel', async () => {
   await go('#/rapido?f=story'); await page.fill('#tema', 'luto'); await page.click('#gotema');
   await page.waitForSelector('#g canvas'); await page.waitForTimeout(1500); await shot('03f-tema-luto');

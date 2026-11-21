@@ -35,6 +35,7 @@ export async function render(view) {
     </div>
     <div class="row" style="margin-top:8px"><a class="btn sm ghost" href="#/agenda">${I.calendar}${t('Ver programação')}</a><a class="btn sm ghost" href="#/perfil/criar-tutorial">${I.help}${t('Como criar (vídeo)')}</a></div>
   </section>
+  <a class="vg-banner" href="#/rapido?f=story&th=mix&vg=1"><span class="vg-tag">✦ ${t('Novo')}</span><b>${t('Vanguarda')}</b><small>${t('Estilos que param o scroll: revista, aura, conversa, neo-brutal e mais')}</small><i>→</i></a>
 
   <div class="quick" style="margin-top:16px">
     <a href="#/biblioteca">${I.grid}<span>${t('Artes prontas')}</span></a>
