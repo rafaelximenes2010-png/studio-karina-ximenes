@@ -94,6 +94,10 @@ await step('Vanguarda: 12 layouts ousados e estilos tipo filtro', async () => {
   await shot('03l-vanguarda');
   const n = await page.locator('#g [data-i]').count(); if (n !== 12) throw new Error('artes: ' + n);
   const styles = await page.locator('#styles [data-style]').count(); if (styles < 15) throw new Error('estilos: ' + styles);
+  await page.fill('#vgtxt', 'Você não precisa ter todas as respostas hoje.'); await page.click('#vggo');
+  await page.waitForFunction(() => location.hash.includes('vg=1') && location.hash.includes('txt='));
+  await page.waitForSelector('#g canvas'); await page.waitForTimeout(2500); await shot('03l2-vanguarda-texto-livre');
+  if (await page.locator('#g [data-i]').count() !== 12) throw new Error('texto livre não gerou 12 artes');
   await page.click('#styles [data-style=lavanda]'); await page.waitForTimeout(1500); await shot('03m-estilo-lavanda');
   await page.click('[data-ownf=feed]'); await page.waitForFunction(() => location.hash.includes('vg=1') && location.hash.includes('f=feed'));
   await page.waitForSelector('#g canvas'); await page.locator('#g [data-i]').first().click(); await page.waitForSelector('#ig:not([disabled])', { timeout: 20000 });

@@ -165,7 +165,13 @@ async function arts(view, fk, th, txt, tema, own = false, vg = false) {
   const label = txt ? t('Sua frase') : tema ? comp.theme : th === 'mix' ? t('Minha foto') : t(themeLabel || '');
   const modeChips = (key) => `<div class="chips" id="ownfmt">${[['story', I.story + 'Story'], ['feed', I.feed + 'Feed'], ['status', I.chat + 'Status'], ['square', I.square + t('Quadrado')]].map(([k, l]) => `<button class="chip ic" data-ownf="${k}" aria-pressed="${fk === k}">${l}</button>`).join('')}</div>
     <div class="chips" id="ownth" style="margin-top:6px">${[['mix', I.sparkle + t('Variado')], ['espiritualidade', I.cross + t('Fé')], ['logoterapia', I.compass + t('Sentido')], ['emocional', I.leaf + t('Cuidado')], ['relacoes', I.users + t('Relações')], ...(PHRASES.some((p) => p.custom) ? [['minhas', I.feather + t('Minhas')]] : [])].map(([k, l]) => `<button class="chip ic" data-ownt="${k}" aria-pressed="${th === k}">${l}</button>`).join('')}</div>`;
-  const vgBlock = vg ? `<section class="vg-hero"><div><span class="vg-tag">✦ ${t('Vanguarda')}</span><h1>${t('Estilos que param o scroll')}</h1><p>${t('12 formatos ousados, sempre com a sua marca.')}</p></div><span class="vg-num">12</span></section>${modeChips()}` : '';
+  const vgBlock = vg ? `<section class="vg-hero"><div><span class="vg-tag">✦ ${t('Vanguarda')}</span><h1>${t('Estilos que param o scroll')}</h1><p>${t('12 formatos ousados, sempre com a sua marca.')}</p></div><span class="vg-num">12</span></section>
+    <div class="vg-write">
+      <label for="vgtxt"><b>${t('Escreva o que quiser')}</b><small>${t('Seu texto entra nos 12 modelos. Depois é só escolher a arte.')}</small></label>
+      <textarea id="vgtxt" class="input" rows="3" maxlength="280" placeholder="${t('Ex.: Você não precisa ter todas as respostas hoje.')}">${esc(txt || '')}</textarea>
+      <div class="row" style="gap:8px;margin-top:8px"><button class="btn grow" id="vggo">${I.sparkle}${t('Ver nas artes')}</button>${txt ? `<button class="btn ghost" id="vgclear">${t('Limpar')}</button>` : ''}</div>
+    </div>
+    ${txt ? modeChips().split('<div class="chips" id="ownth"')[0] : modeChips()}` : '';
   const ownBlock = own ? `<div class="own-head">
       <img data-asset="${st.photo || ''}" alt="" class="own-ph">
       <div class="grow"><b>${t('Sua foto já está nas artes')}</b><small>${t('Escolha o formato e o assunto, ou toque numa arte para postar.')}</small>
@@ -237,6 +243,7 @@ async function arts(view, fk, th, txt, tema, own = false, vg = false) {
     grid.onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) postArt(list[+b.dataset.i], { photo: st.photo, wa: !!F.wa }); };
   };
   paintGrid();
+  if (vg && txt) setTimeout(() => $('#styles', view)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
   const sbox = $('#styles', view);
   if (sbox) {
     const base = specs()[0];
@@ -247,7 +254,9 @@ async function arts(view, fk, th, txt, tema, own = false, vg = false) {
     if (sw) sw.onchange = async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const a = await saveImageBlob(f, { name: f.name || 'minha-foto', source: 'celular' }); sessionStorage.setItem('sk-photo', a.id); arts(view, fk, th, txt, tema, true, vg); } catch (err) { toast(err.message); } };
   }
   view.onclick = async (e) => {
-    const mode = vg ? { vg: '1' } : { foto: '1' };
+    const mode = vg ? { vg: '1', ...(txt ? { txt } : {}) } : { foto: '1' };
+    if (e.target.closest('#vggo')) { const v = $('#vgtxt', view).value.trim(); if (!v) return toast(t('Escreva uma frase.')); return go({ f: fk, th, vg: '1', txt: v.slice(0, 280) }); }
+    if (e.target.closest('#vgclear')) return go({ f: fk, th, vg: '1' });
     const of = e.target.closest('[data-ownf]'); if (of) return go({ f: of.dataset.ownf, th, ...mode });
     const ot = e.target.closest('[data-ownt]'); if (ot) return go({ f: fk, th: ot.dataset.ownt, ...mode });
     const sb = e.target.closest('[data-style]');

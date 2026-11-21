@@ -1001,4 +1001,10 @@ export const DICT = {
   "✨ 12 artes novas chegaram nesta semana!": { en: "✨ 12 new designs arrived this week!", es: "✨ ¡Llegaron 12 artes nuevas esta semana!" },
   "Inédita": { en: "Brand new", es: "Inédita" },
   "Metade": { en: "Half", es: "Mitad" },
+  "Escreva o que quiser": { en: "Write whatever you want", es: "Escribe lo que quieras" },
+  "Seu texto entra nos 12 modelos. Depois é só escolher a arte.": { en: "Your text goes into all 12 designs. Then just pick one.", es: "Tu texto entra en los 12 modelos. Luego solo elige el arte." },
+  "Ex.: Você não precisa ter todas as respostas hoje.": { en: "E.g.: You don't need to have all the answers today.", es: "Ej.: No necesitas tener todas las respuestas hoy." },
+  "Ver nas artes": { en: "See it in the designs", es: "Verlo en las artes" },
+  "Limpar": { en: "Clear", es: "Limpiar" },
+  "Escreva uma frase.": { en: "Write a sentence.", es: "Escribe una frase." },
 };
