@@ -133,20 +133,38 @@ async function arts(view, fk, th, txt, tema, own = false, vg = false) {
     if (fk === 'carousel') {
       const cap = comp && tema ? comp.caption : undefined;
       if (st.ctype === 'dicas' || st.ctype === 'perguntas') {
-        const lists = st.ctype === 'perguntas' ? [comp?.questions || composeFromTheme(txt || 'a vida').questions]
-          : [...PHRASES.filter((p) => p.items && (th ? p.cat === th : tema ? false : true)), comp?.list || composeFromTheme(txt || 'o dia a dia').list];
+        const c0 = comp || composeFromTheme(txt || 'o dia a dia');
+        const lists = st.ctype === 'perguntas' ? c0.questionSets
+          : [...PHRASES.filter((p) => p.items && (th ? p.cat === th : tema ? false : true)), ...c0.listSets];
         return Array.from({ length: N }, (_, i) => {
-          const p = lists[(st.shift + i) % lists.length];
+          const p = lists[(st.shift * N + i) % lists.length];
           return { layout: 'carrossel', ...(p.generated ? { phrase: p } : { phraseId: p.id }), palette: pal(i, 3), format: 'portrait', caption: cap };
         });
       }
-      const inner = ['minimal', 'aspas', 'cartao', 'moldura'];
-      const pool = comp?.phrases?.length ? comp.phrases : PHRASES.filter((p) => (th ? p.cat === th || (th === 'minhas' && p.custom) : true) && !p.items);
+      // Cada carrossel com um ângulo próprio: título, capa, páginas internas, frases e chamada final diferentes
+      const covers = ['editorial', 'gigante', 'revista', 'aura', 'marcatexto', 'metade', 'manuscrito', 'tipografico'];
+      const inners = ['minimal', 'aspas', 'cartao', 'moldura', 'aura', 'marcatexto', 'manuscrito', 'notas'];
+      const g = comp?.g; const hard = comp && !comp.bright;
+      const ANG = g ? (hard ? [
+        `${g.T}: 5 verdades que acolhem`, `O que ninguém te conta sobre ${g.o}`, `Se ${g.o} pesa hoje, leia isto`, `${g.T} em 5 lembretes`,
+        `Um guia gentil sobre ${g.o}`, `Para quem está vivendo ${g.o}`, `5 frases para guardar sobre ${g.t}`, `Pausa para pensar ${g.no}`,
+      ] : [
+        `${g.T}: 5 lembretes leves`, `O que ${g.o} pode nos ensinar`, `${g.T} e saúde emocional`, `5 frases sobre ${g.t} para guardar`,
+        `Um olhar gentil sobre ${g.o}`, `Pausa para pensar ${g.no}`, `${g.T} em pequenas doses`, `Por que ${g.o} faz bem`,
+      ]) : null;
+      const base = comp?.phrases?.length ? comp.phrases : [];
+      const catPool = PHRASES.filter((p) => !p.items && (th === 'minhas' ? p.custom : p.cat === (comp?.cat || th)));
+      const pool = [...base, ...catPool].filter((p, k, a) => a.findIndex((x) => x.text === p.text) === k);
+      const seed = [...String(tema || th || txt || '')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, st.shift + 7);
+      const order = pool.map((p, k) => [p, Math.sin(seed * 9301 + k * 49297) * 233280 % 1]).sort((a, b) => a[1] - b[1]).map((x) => x[0]);
       return Array.from({ length: N }, (_, i) => {
-        const ps = Array.from({ length: 5 }, (_, j) => pool[(st.shift * 5 + i * 2 + j) % Math.max(1, pool.length)]).filter(Boolean);
-        const uniq = ps.filter((p, k) => ps.findIndex((x) => x.id === p.id) === k);
-        return { layout: 'carrossel-tema', cat: comp?.cat || th || 'reflexoes', ...(comp ? { phrases: uniq } : { phraseIds: uniq.map((p) => p.id) }), inner: inner[(st.shift + i) % inner.length],
-          palette: pal(i, 3), format: 'portrait', title: txt || (tema ? comp.theme : undefined), caption: cap };
+        const ps = Array.from({ length: 5 }, (_, j) => order[(i * 5 + j) % Math.max(1, order.length)]).filter(Boolean);
+        const uniq = ps.filter((p, k) => ps.findIndex((x) => x.text === p.text) === k);
+        const k = st.shift * N + i;
+        const title = txt || (ANG ? ANG[k % ANG.length] : undefined);
+        const anyGen = uniq.some((p) => p.generated);
+        return { layout: 'carrossel-tema', cat: comp?.cat || th || 'reflexoes', ...(anyGen || comp ? { phrases: uniq } : { phraseIds: uniq.map((p) => p.id) }),
+          cover: covers[k % covers.length], inner: inners[(k * 3 + 1) % inners.length], palette: pal(i, 3), format: 'portrait', title, caption: cap };
       });
     }
     const modern = st.photo && st.photo === sessionStorage.getItem('sk-paisagem');

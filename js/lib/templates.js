@@ -568,9 +568,11 @@ export function buildThemeCarousel(spec, o = {}) {
   const page = (layers) => ({ bg: { ...pal.bg }, layers: layers.map((l, i) => ({ ...l, tpl: i })), stampRing: pal.ring });
   const title = spec.title || `Semana de ${cat?.label || 'reflexão'}`;
   const inner = L[spec.inner] && !LIST_LAYOUTS.includes(spec.inner) ? spec.inner : 'minimal';
-  const pages = [page(L.editorial({ cat: spec.cat, text: title, credit: `${ph.length} ${spec.credit || 'reflexões para a sua semana'} · arraste →` }, pal, F, opts))];
+  const cover = L[spec.cover] && !LIST_LAYOUTS.includes(spec.cover) ? spec.cover : 'editorial';
+  const pages = [page(L[cover]({ cat: spec.cat, text: title, credit: `${ph.length} ${spec.credit || 'reflexões para a sua semana'} · arraste →` }, pal, F, opts))];
   ph.forEach((p, i) => pages.push(page(L[inner]({ ...p, text: p.items ? p.title : p.text, campaign: `${i + 1} / ${ph.length} · ${cat?.label || ''}` }, pal, F, opts))));
-  pages.push(page(L.institucional({ cat: spec.cat, text: 'Salve este carrossel e volte a ele ao longo da semana. Compartilhe com quem precisa ler isso hoje.' }, pal, F, opts)));
+  const CTA = ['Salve este carrossel e volte a ele ao longo da semana. Compartilhe com quem precisa ler isso hoje.', 'Qual destas frases tocou você? Conte nos comentários.', 'Envie para alguém que precisa ouvir isso hoje.', 'Guarde para os dias difíceis. Você não está sozinho.', 'Se fez sentido, salve e compartilhe. Pequenos lembretes cuidam.'];
+  pages.push(page(L.institucional({ cat: spec.cat, text: spec.cta || CTA[String(title).length % CTA.length] }, pal, F, opts)));
   return pages;
 }
 
