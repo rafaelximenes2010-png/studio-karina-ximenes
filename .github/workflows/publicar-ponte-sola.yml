@@ -1,0 +1,79 @@
+name: Publicar ponte do SOLA (Cloudflare)
+
+# ATENÇÃO: este workflow NÃO mexe no Studio KXS. Ele só usa a chave da Cloudflare guardada
+# neste repositório (autorizado pelo Rafael em 22/11/2026) para publicar a ponte do SOLA
+# (Worker "tradutor"), cujo código fica no repositório concordancia-biblica (tradutor/worker.js).
+# Mantém todas as configurações atuais do Worker (chaves, KV, variáveis, horários) e só
+# acrescenta o contador COTA. Se o teste depois de publicar falhar, volta à versão anterior.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publicar-ponte-sola.yml']
+
+# versão do pedido de publicação: 2026-11-22a
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SCRIPT: tradutor
+      URL: https://tradutor.rafael-ximenes-2010.workers.dev
+    steps:
+      - name: Conferir segredos
+        run: |
+          [ -n "$CF_TOKEN" ] && [ -n "$CF_ACCOUNT" ] || { echo "::error::Faltam CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+      - name: Baixar o código do SOLA
+        run: |
+          curl -sfL https://raw.githubusercontent.com/rafaelximenes2010-png/concordancia-biblica/main/tradutor/worker.js -o worker.js
+          node --check worker.js && grep -q "export class Cota" worker.js
+      - name: Ler a configuração atual do Worker
+        run: |
+          API=https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/workers/scripts/$SCRIPT
+          curl -s -H "Authorization: Bearer $CF_TOKEN" $API/settings > settings.json
+          curl -s -H "Authorization: Bearer $CF_TOKEN" $API/deployments > deployments.json
+          python3 - <<'PY'
+          import json
+          s=json.load(open('settings.json')); assert s.get('success'), s.get('errors')
+          r=s['result']; b=r.get('bindings',[])
+          print('Ligações atuais:', [(x['type'],x['name']) for x in b])
+          print('compatibility_date:', r.get('compatibility_date'))
+          d=json.load(open('deployments.json'))
+          old=''
+          try: old=d['result']['deployments'][0]['versions'][0]['version_id']
+          except Exception as e: print('sem versão anterior:', e)
+          open('old_version.txt','w').write(old)
+          has=any(x['type']=='durable_object_namespace' and x['name']=='COTA' for x in b)
+          meta={'main_module':'worker.js','compatibility_date':r.get('compatibility_date') or '2026-11-01',
+                'compatibility_flags':r.get('compatibility_flags') or [],
+                'keep_bindings':sorted({x['type'] for x in b}),
+                'bindings':[] if has else [{'type':'durable_object_namespace','name':'COTA','class_name':'Cota'}]}
+          if not has: meta['migrations']={'new_tag':'v1-cota','new_sqlite_classes':['Cota']}
+          if r.get('usage_model'): meta['usage_model']=r['usage_model']
+          json.dump(meta,open('meta.json','w')); print('metadata:', json.dumps(meta))
+          PY
+      - name: Publicar
+        run: |
+          API=https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/workers/scripts/$SCRIPT
+          curl -s -X PUT -H "Authorization: Bearer $CF_TOKEN" -F "metadata=@meta.json;type=application/json" -F "worker.js=@worker.js;type=application/javascript+module" $API > put.json
+          python3 -c "import json;d=json.load(open('put.json'));print('sucesso:',d.get('success'),d.get('errors'));assert d.get('success')"
+      - name: Testar e, se falhar, voltar à versão anterior
+        run: |
+          sleep 8
+          ok=1
+          curl -sf -m 20 "$URL/" | grep -q tradutor || ok=0
+          u=$(curl -s -m 20 "$URL/uso"); echo "uso: ${u:0:300}"; echo "$u" | grep -q '"status"' || ok=0
+          t=$(curl -s -m 30 -X POST -H "Origin: https://solabiblia.net.br" -H "Content-Type: application/json" -d '{"text":"Grace","from":"en","to":"pt","dev":"0123456789abcdef"}' "$URL/"); echo "tradução: $t"
+          echo "$t" | grep -q '"text"' || ok=0
+          if [ "$ok" = 1 ]; then echo "Ponte do SOLA publicada e testada."; exit 0; fi
+          OLD=$(cat old_version.txt)
+          if [ -n "$OLD" ]; then
+            curl -s -X POST -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+              -d "{\"strategy\":\"percentage\",\"versions\":[{\"percentage\":100,\"version_id\":\"$OLD\"}]}" \
+              https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/workers/scripts/$SCRIPT/deployments | head -c 400
+            echo; echo "::error::Teste falhou: voltei à versão anterior ($OLD)."
+          fi
+          exit 1
