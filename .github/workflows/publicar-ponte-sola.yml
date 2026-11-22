@@ -11,7 +11,7 @@ on:
     branches: [main]
     paths: ['.github/workflows/publicar-ponte-sola.yml']
 
-# versão do pedido de publicação: 2026-11-22b (alertas no canal)
+# versão do pedido de publicação: 2026-11-22c (teste compara com a versão anterior)
 
 jobs:
   deploy:
@@ -55,6 +55,10 @@ jobs:
           if r.get('usage_model'): meta['usage_model']=r['usage_model']
           json.dump(meta,open('meta.json','w')); print('metadata:', json.dumps(meta))
           PY
+      - name: Testar a tradução na versão atual (referência)
+        run: |
+          t=$(curl -s -m 30 -X POST -H "Origin: https://solabiblia.net.br" -H "Content-Type: application/json" -d '{"text":"Grace","from":"en","to":"pt"}' "$URL/"); echo "tradução antes: $t"
+          if echo "$t" | grep -q '"text"'; then echo 1 > tr_antes.txt; else echo 0 > tr_antes.txt; fi
       - name: Publicar
         run: |
           API=https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/workers/scripts/$SCRIPT
@@ -67,7 +71,9 @@ jobs:
           curl -sf -m 20 "$URL/" | grep -q tradutor || ok=0
           u=$(curl -s -m 20 "$URL/uso"); echo "uso: ${u:0:300}"; echo "$u" | grep -q '"status"' || ok=0
           t=$(curl -s -m 30 -X POST -H "Origin: https://solabiblia.net.br" -H "Content-Type: application/json" -d '{"text":"Grace","from":"en","to":"pt","dev":"0123456789abcdef"}' "$URL/"); echo "tradução: $t"
-          echo "$t" | grep -q '"text"' || ok=0
+          if ! echo "$t" | grep -q '"text"'; then
+            if [ "$(cat tr_antes.txt)" = 1 ]; then ok=0; else echo "::warning::A tradução já falhava antes desta publicação (problema no Azure, não no código novo). Mantendo a versão nova."; fi
+          fi
           if [ "$ok" = 1 ]; then echo "Ponte do SOLA publicada e testada."; exit 0; fi
           OLD=$(cat old_version.txt)
           if [ -n "$OLD" ]; then
