@@ -11,7 +11,7 @@ on:
     branches: [main]
     paths: ['.github/workflows/publicar-ponte-sola.yml']
 
-# versão do pedido de publicação: 2026-11-22a
+# versão do pedido de publicação: 2026-11-22b (alertas no canal)
 
 jobs:
   deploy:
